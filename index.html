@@ -27,6 +27,7 @@
       --color-att: #2d6a4f;
       --color-late: #d97706;
       --color-abs: #b91c1c;
+      --color-untaught: #5A189A; /* Dark neon purple warning for untaught slots */
 
       /* Subject Palette Constants */
       --phil-bg:    #2a1a05; --phil-fg:    #f0c07a; --phil-accent: #c07830;
@@ -156,10 +157,15 @@
       font-weight: bold;
       color: var(--text);
       display: flex;
-      gap: 10px;
+      gap: 6px;
+      flex-wrap: wrap;
+    }
+    .metric-val {
+      display: inline-flex;
+      align-items: center;
     }
     .metric-val .lbl {
-      font-size: 8.5px;
+      font-size: 8px;
       color: var(--muted);
       font-weight: normal;
       text-transform: uppercase;
@@ -167,6 +173,7 @@
     }
     .metric-val.abs-count { color: #f25c5c; }
     .metric-val.late-count { color: #f59e0b; }
+    .metric-val.untaught-count { color: #5A189A; }
 
     .table-container {
       width: 100%;
@@ -180,7 +187,7 @@
       width: 100%;
       border-collapse: collapse;
       font-size: 11.5px;
-      min-width: 950px;
+      min-width: 1000px;
     }
 
     th, td {
@@ -261,10 +268,11 @@
     .cell-card {
       display: flex;
       flex-direction: column;
-      gap: 8px;
+      gap: 6px;
       padding: 8px;
       border-radius: 4px;
       border-left: 2px solid transparent;
+      position: relative;
     }
     .cell-card .text-group {
       display: flex;
@@ -277,7 +285,14 @@
       margin-top: 1px;
     }
 
+    .control-row {
+      display: flex;
+      gap: 3px;
+      align-items: center;
+    }
+
     .state-group {
+      flex: 1;
       display: flex;
       gap: 2px;
       background: rgba(0,0,0,0.2);
@@ -318,7 +333,39 @@
       color: #ffffff;
     }
 
-    .cell-card:has(input[value="attended"]:checked) .text-group {
+    /* unt Checkbox Button Styles */
+    .untaught-label {
+      display: none; /* Hidden by default, dynamically displayed via CSS */
+      align-items: center;
+      justify-content: center;
+      font-size: 8px;
+      width: 22px;
+      height: 20px;
+      cursor: pointer;
+      border-radius: 4px;
+      background: rgba(0,0,0,0.2);
+      border: 0.5px solid var(--border);
+      color: var(--muted);
+      font-weight: 600;
+      user-select: none;
+    }
+    .untaught-label input[type="checkbox"] {
+      display: none;
+    }
+    .untaught-label:has(input:checked) {
+      background: var(--color-untaught);
+      border-color: #5A189A;
+      color: #ffffff;
+    }
+
+    /* Show unt option ONLY when Attended or Late is checked */
+    .cell-card:has(input[value="attended"]:checked) .untaught-label,
+    .cell-card:has(input[value="late"]:checked) .untaught-label {
+      display: inline-flex;
+    }
+
+    /* Text strike-through rules */
+    .cell-card:has(input[value="attended"]:checked):not(:has(input.untaught-check:checked)) .text-group {
       opacity: 0.35;
       text-decoration: line-through;
     }
@@ -326,10 +373,20 @@
       opacity: 0.2;
       text-decoration: line-through;
     }
+    /* If marked as unt, highlight the background text card with a subtle color border */
+    .cell-card:has(input.untaught-check:checked) {
+      border-right: 2px solid #5A189A;
+    }
 
-    .reason-box {
+    /* Dynamic Inputs Layout Wrapper */
+    .dynamic-inputs {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .reason-box, .arrival-box {
       display: none;
-      width: 100%;
       background: rgba(0,0,0,0.4);
       border: 0.5px solid var(--border);
       color: var(--text);
@@ -338,16 +395,22 @@
       padding: 5px 6px;
       border-radius: 3px;
       outline: none;
+      width: 100%;
     }
-    .reason-box::placeholder {
+    .reason-box::placeholder, .arrival-box::placeholder {
       color: var(--muted);
     }
-    .reason-box:focus {
+    .reason-box:focus, .arrival-box:focus {
       border-color: var(--accent);
     }
 
+    /* Input visibility states */
+    .cell-card:has(input[value="late"]:checked) .arrival-box {
+      display: block;
+    }
     .cell-card:has(input[value="late"]:checked) .reason-box,
-    .cell-card:has(input[value="absent"]:checked) .reason-box {
+    .cell-card:has(input[value="absent"]:checked) .reason-box,
+    .cell-card:has(input.untaught-check:checked) .reason-box {
       display: block;
     }
 
@@ -438,6 +501,7 @@
     .glossary-term.g-att { color: var(--color-att); }
     .glossary-term.g-late { color: var(--color-late); }
     .glossary-term.g-abs { color: var(--color-abs); }
+    .glossary-term.g-untaught { color: #5A189A; }
     .glossary-desc {
       color: var(--muted);
     }
@@ -521,13 +585,17 @@
       color: #f59e0b;
       font-weight: bold;
     }
+    .stat-accent-untaught {
+      color: #5A189A;
+      font-weight: bold;
+    }
   </style>
 </head>
 <body>
 
 <div class="wrap">
   <div class="header">
-    <div class="header-title">BPHSCA <em> Attendance Dashboard</em></div>
+    <div class="header-title">BPHSCA <em>Dashboard</em></div>
     <div class="header-sub">BPHSCA · G12 Kumintang · First Trimester SY 2026-2027</div>
   </div>
 
@@ -550,7 +618,7 @@
   <div class="section-label" id="panelContextLabel">Attendance Metrics Dashboard (Active Week)</div>
   <div class="metrics-panel">
     <div class="metric-card student-card">
-      <span class="metric-title">Mr. Martija <em>(Student)</em></span>
+      <span class="metric-title">Martija <em>(Student)</em></span>
       <div class="metrics-values">
         <span class="metric-val abs-count" id="stat-student-abs">0<span class="lbl">Abs</span></span>
         <span class="metric-val late-count" id="stat-student-late">0<span class="lbl">Late</span></span>
@@ -561,6 +629,7 @@
       <div class="metrics-values">
         <span class="metric-val abs-count" id="medrano-abs">0<span class="lbl">Abs</span></span>
         <span class="metric-val late-count" id="medrano-late">0<span class="lbl">Late</span></span>
+        <span class="metric-val untaught-count" id="medrano-untaught">0<span class="lbl">unt</span></span>
       </div>
     </div>
     <div class="metric-card" data-teacher="Ms. Ellazar">
@@ -568,6 +637,7 @@
       <div class="metrics-values">
         <span class="metric-val abs-count" id="ellazar-abs">0<span class="lbl">Abs</span></span>
         <span class="metric-val late-count" id="ellazar-late">0<span class="lbl">Late</span></span>
+        <span class="metric-val untaught-count" id="ellazar-untaught">0<span class="lbl">unt</span></span>
       </div>
     </div>
     <div class="metric-card" data-teacher="Ms. Masangcay">
@@ -575,6 +645,7 @@
       <div class="metrics-values">
         <span class="metric-val abs-count" id="masangcay-abs">0<span class="lbl">Abs</span></span>
         <span class="metric-val late-count" id="masangcay-late">0<span class="lbl">Late</span></span>
+        <span class="metric-val untaught-count" id="masangcay-untaught">0<span class="lbl">unt</span></span>
       </div>
     </div>
     <div class="metric-card" data-teacher="Mr. Divino">
@@ -582,11 +653,11 @@
       <div class="metrics-values">
         <span class="metric-val abs-count" id="divino-abs">0<span class="lbl">Abs</span></span>
         <span class="metric-val late-count" id="divino-late">0<span class="lbl">Late</span></span>
+        <span class="metric-val untaught-count" id="divino-untaught">0<span class="lbl">unt</span></span>
       </div>
     </div>
   </div>
 
-  <!-- Weekly Grid View Target -->
   <div id="weeklyGridContainer">
     <div class="section-label" id="matrixLabel">Weekly Class Program Grid</div>
     <div class="table-container">
@@ -618,56 +689,86 @@
             <td data-day="mon">
               <div class="cell-card t-phil" data-teacher="Ms. Medrano">
                 <div class="text-group">Phil. <span class="sub">Ms. Medrano</span></div>
-                <div class="state-group">
-                  <label class="state-label"><input type="radio" name="mon-0700" value="attended">Att</label>
-                  <label class="state-label"><input type="radio" name="mon-0700" value="late">Late</label>
-                  <label class="state-label"><input type="radio" name="mon-0700" value="absent">Abs</label>
+                <div class="control-row">
+                  <div class="state-group">
+                    <label class="state-label"><input type="radio" name="mon-0700" value="attended">Att</label>
+                    <label class="state-label"><input type="radio" name="mon-0700" value="late">Late</label>
+                    <label class="state-label"><input type="radio" name="mon-0700" value="absent">Abs</label>
+                  </div>
+                  <label class="untaught-label" title="Teacher attended but did not teach"><input type="checkbox" class="untaught-check" data-slot="mon-0700">unt</label>
                 </div>
-                <input type="text" class="reason-box" data-slot="mon-0700" placeholder="State reason...">
+                <div class="dynamic-inputs">
+                  <input type="text" class="arrival-box" data-slot="mon-0700" placeholder="Arrival time (e.g. 7:15)...">
+                  <input type="text" class="reason-box" data-slot="mon-0700" placeholder="State reason/context...">
+                </div>
               </div>
             </td>
             <td data-day="tue">
               <div class="cell-card t-phil" data-teacher="Ms. Medrano">
                 <div class="text-group">Phil. <span class="sub">Ms. Medrano</span></div>
-                <div class="state-group">
-                  <label class="state-label"><input type="radio" name="tue-0700" value="attended">Att</label>
-                  <label class="state-label"><input type="radio" name="tue-0700" value="late">Late</label>
-                  <label class="state-label"><input type="radio" name="tue-0700" value="absent">Abs</label>
+                <div class="control-row">
+                  <div class="state-group">
+                    <label class="state-label"><input type="radio" name="tue-0700" value="attended">Att</label>
+                    <label class="state-label"><input type="radio" name="tue-0700" value="late">Late</label>
+                    <label class="state-label"><input type="radio" name="tue-0700" value="absent">Abs</label>
+                  </div>
+                  <label class="untaught-label" title="Teacher attended but did not teach"><input type="checkbox" class="untaught-check" data-slot="tue-0700">unt</label>
                 </div>
-                <input type="text" class="reason-box" data-slot="tue-0700" placeholder="State reason...">
+                <div class="dynamic-inputs">
+                  <input type="text" class="arrival-box" data-slot="tue-0700" placeholder="Arrival time (e.g. 7:15)...">
+                  <input type="text" class="reason-box" data-slot="tue-0700" placeholder="State reason/context...">
+                </div>
               </div>
             </td>
             <td data-day="wed">
               <div class="cell-card t-phil" data-teacher="Ms. Medrano">
                 <div class="text-group">Phil. <span class="sub">Ms. Medrano</span></div>
-                <div class="state-group">
-                  <label class="state-label"><input type="radio" name="wed-0700" value="attended">Att</label>
-                  <label class="state-label"><input type="radio" name="wed-0700" value="late">Late</label>
-                  <label class="state-label"><input type="radio" name="wed-0700" value="absent">Abs</label>
+                <div class="control-row">
+                  <div class="state-group">
+                    <label class="state-label"><input type="radio" name="wed-0700" value="attended">Att</label>
+                    <label class="state-label"><input type="radio" name="wed-0700" value="late">Late</label>
+                    <label class="state-label"><input type="radio" name="wed-0700" value="absent">Abs</label>
+                  </div>
+                  <label class="untaught-label" title="Teacher attended but did not teach"><input type="checkbox" class="untaught-check" data-slot="wed-0700">unt</label>
                 </div>
-                <input type="text" class="reason-box" data-slot="wed-0700" placeholder="State reason...">
+                <div class="dynamic-inputs">
+                  <input type="text" class="arrival-box" data-slot="wed-0700" placeholder="Arrival time (e.g. 7:15)...">
+                  <input type="text" class="reason-box" data-slot="wed-0700" placeholder="State reason/context...">
+                </div>
               </div>
             </td>
             <td data-day="thu">
               <div class="cell-card t-phil" data-teacher="Ms. Medrano">
                 <div class="text-group">Phil. <span class="sub">Ms. Medrano</span></div>
-                <div class="state-group">
-                  <label class="state-label"><input type="radio" name="thu-0700" value="attended">Att</label>
-                  <label class="state-label"><input type="radio" name="thu-0700" value="late">Late</label>
-                  <label class="state-label"><input type="radio" name="thu-0700" value="absent">Abs</label>
+                <div class="control-row">
+                  <div class="state-group">
+                    <label class="state-label"><input type="radio" name="thu-0700" value="attended">Att</label>
+                    <label class="state-label"><input type="radio" name="thu-0700" value="late">Late</label>
+                    <label class="state-label"><input type="radio" name="thu-0700" value="absent">Abs</label>
+                  </div>
+                  <label class="untaught-label" title="Teacher attended but did not teach"><input type="checkbox" class="untaught-check" data-slot="thu-0700">unt</label>
                 </div>
-                <input type="text" class="reason-box" data-slot="thu-0700" placeholder="State reason...">
+                <div class="dynamic-inputs">
+                  <input type="text" class="arrival-box" data-slot="thu-0700" placeholder="Arrival time (e.g. 7:15)...">
+                  <input type="text" class="reason-box" data-slot="thu-0700" placeholder="State reason/context...">
+                </div>
               </div>
             </td>
             <td data-day="fri">
               <div class="cell-card t-hgp" data-teacher="Ms. Ellazar">
                 <div class="text-group">HGP <span class="sub">Ms. Ellazar</span></div>
-                <div class="state-group">
-                  <label class="state-label"><input type="radio" name="fri-0700" value="attended">Att</label>
-                  <label class="state-label"><input type="radio" name="fri-0700" value="late">Late</label>
-                  <label class="state-label"><input type="radio" name="fri-0700" value="absent">Abs</label>
+                <div class="control-row">
+                  <div class="state-group">
+                    <label class="state-label"><input type="radio" name="fri-0700" value="attended">Att</label>
+                    <label class="state-label"><input type="radio" name="fri-0700" value="late">Late</label>
+                    <label class="state-label"><input type="radio" name="fri-0700" value="absent">Abs</label>
+                  </div>
+                  <label class="untaught-label" title="Teacher attended but did not teach"><input type="checkbox" class="untaught-check" data-slot="fri-0700">unt</label>
                 </div>
-                <input type="text" class="reason-box" data-slot="fri-0700" placeholder="State reason...">
+                <div class="dynamic-inputs">
+                  <input type="text" class="arrival-box" data-slot="fri-0700" placeholder="Arrival time (e.g. 7:15)...">
+                  <input type="text" class="reason-box" data-slot="fri-0700" placeholder="State reason/context...">
+                </div>
               </div>
             </td>
           </tr>
@@ -677,56 +778,86 @@
             <td data-day="mon">
               <div class="cell-card t-ucsp" data-teacher="Ms. Ellazar">
                 <div class="text-group">UCSP <span class="sub">Ms. Ellazar</span></div>
-                <div class="state-group">
-                  <label class="state-label"><input type="radio" name="mon-0830" value="attended">Att</label>
-                  <label class="state-label"><input type="radio" name="mon-0830" value="late">Late</label>
-                  <label class="state-label"><input type="radio" name="mon-0830" value="absent">Abs</label>
+                <div class="control-row">
+                  <div class="state-group">
+                    <label class="state-label"><input type="radio" name="mon-0830" value="attended">Att</label>
+                    <label class="state-label"><input type="radio" name="mon-0830" value="late">Late</label>
+                    <label class="state-label"><input type="radio" name="mon-0830" value="absent">Abs</label>
+                  </div>
+                  <label class="untaught-label" title="Teacher attended but did not teach"><input type="checkbox" class="untaught-check" data-slot="mon-0830">unt</label>
                 </div>
-                <input type="text" class="reason-box" data-slot="mon-0830" placeholder="State reason...">
+                <div class="dynamic-inputs">
+                  <input type="text" class="arrival-box" data-slot="mon-0830" placeholder="Arrival time (e.g. 8:45)...">
+                  <input type="text" class="reason-box" data-slot="mon-0830" placeholder="State reason/context...">
+                </div>
               </div>
             </td>
             <td data-day="tue">
               <div class="cell-card t-ucsp" data-teacher="Ms. Ellazar">
                 <div class="text-group">UCSP <span class="sub">Ms. Ellazar</span></div>
-                <div class="state-group">
-                  <label class="state-label"><input type="radio" name="tue-0830" value="attended">Att</label>
-                  <label class="state-label"><input type="radio" name="tue-0830" value="late">Late</label>
-                  <label class="state-label"><input type="radio" name="tue-0830" value="absent">Abs</label>
+                <div class="control-row">
+                  <div class="state-group">
+                    <label class="state-label"><input type="radio" name="tue-0830" value="attended">Att</label>
+                    <label class="state-label"><input type="radio" name="tue-0830" value="late">Late</label>
+                    <label class="state-label"><input type="radio" name="tue-0830" value="absent">Abs</label>
+                  </div>
+                  <label class="untaught-label" title="Teacher attended but did not teach"><input type="checkbox" class="untaught-check" data-slot="tue-0830">unt</label>
                 </div>
-                <input type="text" class="reason-box" data-slot="tue-0830" placeholder="State reason...">
+                <div class="dynamic-inputs">
+                  <input type="text" class="arrival-box" data-slot="tue-0830" placeholder="Arrival time (e.g. 8:45)...">
+                  <input type="text" class="reason-box" data-slot="tue-0830" placeholder="State reason/context...">
+                </div>
               </div>
             </td>
             <td data-day="wed">
               <div class="cell-card t-ucsp" data-teacher="Ms. Ellazar">
                 <div class="text-group">UCSP <span class="sub">Ms. Ellazar</span></div>
-                <div class="state-group">
-                  <label class="state-label"><input type="radio" name="wed-0830" value="attended">Att</label>
-                  <label class="state-label"><input type="radio" name="wed-0830" value="late">Late</label>
-                  <label class="state-label"><input type="radio" name="wed-0830" value="absent">Abs</label>
+                <div class="control-row">
+                  <div class="state-group">
+                    <label class="state-label"><input type="radio" name="wed-0830" value="attended">Att</label>
+                    <label class="state-label"><input type="radio" name="wed-0830" value="late">Late</label>
+                    <label class="state-label"><input type="radio" name="wed-0830" value="absent">Abs</label>
+                  </div>
+                  <label class="untaught-label" title="Teacher attended but did not teach"><input type="checkbox" class="untaught-check" data-slot="wed-0830">unt</label>
                 </div>
-                <input type="text" class="reason-box" data-slot="wed-0830" placeholder="State reason...">
+                <div class="dynamic-inputs">
+                  <input type="text" class="arrival-box" data-slot="wed-0830" placeholder="Arrival time (e.g. 8:45)...">
+                  <input type="text" class="reason-box" data-slot="wed-0830" placeholder="State reason/context...">
+                </div>
               </div>
             </td>
             <td data-day="thu">
               <div class="cell-card t-eapp" data-teacher="Ms. Masangcay">
                 <div class="text-group">EAPP <span class="sub">Ms. Masangcay</span></div>
-                <div class="state-group">
-                  <label class="state-label"><input type="radio" name="thu-0830" value="attended">Att</label>
-                  <label class="state-label"><input type="radio" name="thu-0830" value="late">Late</label>
-                  <label class="state-label"><input type="radio" name="thu-0830" value="absent">Abs</label>
+                <div class="control-row">
+                  <div class="state-group">
+                    <label class="state-label"><input type="radio" name="thu-0830" value="attended">Att</label>
+                    <label class="state-label"><input type="radio" name="thu-0830" value="late">Late</label>
+                    <label class="state-label"><input type="radio" name="thu-0830" value="absent">Abs</label>
+                  </div>
+                  <label class="untaught-label" title="Teacher attended but did not teach"><input type="checkbox" class="untaught-check" data-slot="thu-0830">unt</label>
                 </div>
-                <input type="text" class="reason-box" data-slot="thu-0830" placeholder="State reason...">
+                <div class="dynamic-inputs">
+                  <input type="text" class="arrival-box" data-slot="thu-0830" placeholder="Arrival time (e.g. 8:45)...">
+                  <input type="text" class="reason-box" data-slot="thu-0830" placeholder="State reason/context...">
+                </div>
               </div>
             </td>
             <td data-day="fri">
               <div class="cell-card t-eapp" data-teacher="Ms. Masangcay">
                 <div class="text-group">EAPP <span class="sub">Ms. Masangcay</span></div>
-                <div class="state-group">
-                  <label class="state-label"><input type="radio" name="fri-0830" value="attended">Att</label>
-                  <label class="state-label"><input type="radio" name="fri-0830" value="late">Late</label>
-                  <label class="state-label"><input type="radio" name="fri-0830" value="absent">Abs</label>
+                <div class="control-row">
+                  <div class="state-group">
+                    <label class="state-label"><input type="radio" name="fri-0830" value="attended">Att</label>
+                    <label class="state-label"><input type="radio" name="fri-0830" value="late">Late</label>
+                    <label class="state-label"><input type="radio" name="fri-0830" value="absent">Abs</label>
+                  </div>
+                  <label class="untaught-label" title="Teacher attended but did not teach"><input type="checkbox" class="untaught-check" data-slot="fri-0830">unt</label>
                 </div>
-                <input type="text" class="reason-box" data-slot="fri-0830" placeholder="State reason...">
+                <div class="dynamic-inputs">
+                  <input type="text" class="arrival-box" data-slot="fri-0830" placeholder="Arrival time (e.g. 8:45)...">
+                  <input type="text" class="reason-box" data-slot="fri-0830" placeholder="State reason/context...">
+                </div>
               </div>
             </td>
           </tr>
@@ -741,56 +872,86 @@
             <td data-day="mon">
               <div class="cell-card t-ae" data-teacher="Mr. Divino">
                 <div class="text-group">A&E <span class="sub">Mr. Divino</span></div>
-                <div class="state-group">
-                  <label class="state-label"><input type="radio" name="mon-1015" value="attended">Att</label>
-                  <label class="state-label"><input type="radio" name="mon-1015" value="late">Late</label>
-                  <label class="state-label"><input type="radio" name="mon-1015" value="absent">Abs</label>
+                <div class="control-row">
+                  <div class="state-group">
+                    <label class="state-label"><input type="radio" name="mon-1015" value="attended">Att</label>
+                    <label class="state-label"><input type="radio" name="mon-1015" value="late">Late</label>
+                    <label class="state-label"><input type="radio" name="mon-1015" value="absent">Abs</label>
+                  </div>
+                  <label class="untaught-label" title="Teacher attended but did not teach"><input type="checkbox" class="untaught-check" data-slot="mon-1015">unt</label>
                 </div>
-                <input type="text" class="reason-box" data-slot="mon-1015" placeholder="State reason...">
+                <div class="dynamic-inputs">
+                  <input type="text" class="arrival-box" data-slot="mon-1015" placeholder="Arrival time (e.g. 10:30)...">
+                  <input type="text" class="reason-box" data-slot="mon-1015" placeholder="State reason/context...">
+                </div>
               </div>
             </td>
             <td data-day="tue">
               <div class="cell-card t-ae" data-teacher="Mr. Divino">
                 <div class="text-group">A&E <span class="sub">Mr. Divino</span></div>
-                <div class="state-group">
-                  <label class="state-label"><input type="radio" name="tue-1015" value="attended">Att</label>
-                  <label class="state-label"><input type="radio" name="tue-1015" value="late">Late</label>
-                  <label class="state-label"><input type="radio" name="tue-1015" value="absent">Abs</label>
+                <div class="control-row">
+                  <div class="state-group">
+                    <label class="state-label"><input type="radio" name="tue-1015" value="attended">Att</label>
+                    <label class="state-label"><input type="radio" name="tue-1015" value="late">Late</label>
+                    <label class="state-label"><input type="radio" name="tue-1015" value="absent">Abs</label>
+                  </div>
+                  <label class="untaught-label" title="Teacher attended but did not teach"><input type="checkbox" class="untaught-check" data-slot="tue-1015">unt</label>
                 </div>
-                <input type="text" class="reason-box" data-slot="tue-1015" placeholder="State reason...">
+                <div class="dynamic-inputs">
+                  <input type="text" class="arrival-box" data-slot="tue-1015" placeholder="Arrival time (e.g. 10:30)...">
+                  <input type="text" class="reason-box" data-slot="tue-1015" placeholder="State reason/context...">
+                </div>
               </div>
             </td>
             <td data-day="wed">
               <div class="cell-card t-ae" data-teacher="Mr. Divino">
                 <div class="text-group">A&E <span class="sub">Mr. Divino</span></div>
-                <div class="state-group">
-                  <label class="state-label"><input type="radio" name="wed-1015" value="attended">Att</label>
-                  <label class="state-label"><input type="radio" name="wed-1015" value="late">Late</label>
-                  <label class="state-label"><input type="radio" name="wed-1015" value="absent">Abs</label>
+                <div class="control-row">
+                  <div class="state-group">
+                    <label class="state-label"><input type="radio" name="wed-1015" value="attended">Att</label>
+                    <label class="state-label"><input type="radio" name="wed-1015" value="late">Late</label>
+                    <label class="state-label"><input type="radio" name="wed-1015" value="absent">Abs</label>
+                  </div>
+                  <label class="untaught-label" title="Teacher attended but did not teach"><input type="checkbox" class="untaught-check" data-slot="wed-1015">unt</label>
                 </div>
-                <input type="text" class="reason-box" data-slot="wed-1015" placeholder="State reason...">
+                <div class="dynamic-inputs">
+                  <input type="text" class="arrival-box" data-slot="wed-1015" placeholder="Arrival time (e.g. 10:30)...">
+                  <input type="text" class="reason-box" data-slot="wed-1015" placeholder="State reason/context...">
+                </div>
               </div>
             </td>
             <td data-day="thu">
               <div class="cell-card t-ae" data-teacher="Mr. Divino">
                 <div class="text-group">A&E <span class="sub">Mr. Divino</span></div>
-                <div class="state-group">
-                  <label class="state-label"><input type="radio" name="thu-1015" value="attended">Att</label>
-                  <label class="state-label"><input type="radio" name="thu-1015" value="late">Late</label>
-                  <label class="state-label"><input type="radio" name="thu-1015" value="absent">Abs</label>
+                <div class="control-row">
+                  <div class="state-group">
+                    <label class="state-label"><input type="radio" name="thu-1015" value="attended">Att</label>
+                    <label class="state-label"><input type="radio" name="thu-1015" value="late">Late</label>
+                    <label class="state-label"><input type="radio" name="thu-1015" value="absent">Abs</label>
+                  </div>
+                  <label class="untaught-label" title="Teacher attended but did not teach"><input type="checkbox" class="untaught-check" data-slot="thu-1015">unt</label>
                 </div>
-                <input type="text" class="reason-box" data-slot="thu-1015" placeholder="State reason...">
+                <div class="dynamic-inputs">
+                  <input type="text" class="arrival-box" data-slot="thu-1015" placeholder="Arrival time (e.g. 10:30)...">
+                  <input type="text" class="reason-box" data-slot="thu-1015" placeholder="State reason/context...">
+                </div>
               </div>
             </td>
             <td data-day="fri">
               <div class="cell-card t-ucsp" data-teacher="Ms. Ellazar">
                 <div class="text-group">UCSP <span class="sub">Ms. Ellazar</span></div>
-                <div class="state-group">
-                  <label class="state-label"><input type="radio" name="fri-1015" value="attended">Att</label>
-                  <label class="state-label"><input type="radio" name="fri-1015" value="late">Late</label>
-                  <label class="state-label"><input type="radio" name="fri-1015" value="absent">Abs</label>
+                <div class="control-row">
+                  <div class="state-group">
+                    <label class="state-label"><input type="radio" name="fri-1015" value="attended">Att</label>
+                    <label class="state-label"><input type="radio" name="fri-1015" value="late">Late</label>
+                    <label class="state-label"><input type="radio" name="fri-1015" value="absent">Abs</label>
+                  </div>
+                  <label class="untaught-label" title="Teacher attended but did not teach"><input type="checkbox" class="untaught-check" data-slot="fri-1015">unt</label>
                 </div>
-                <input type="text" class="reason-box" data-slot="fri-1015" placeholder="State reason...">
+                <div class="dynamic-inputs">
+                  <input type="text" class="arrival-box" data-slot="fri-1015" placeholder="Arrival time (e.g. 10:30)...">
+                  <input type="text" class="reason-box" data-slot="fri-1015" placeholder="State reason/context...">
+                </div>
               </div>
             </td>
           </tr>
@@ -805,56 +966,86 @@
             <td data-day="mon">
               <div class="cell-card t-eapp" data-teacher="Ms. Masangcay">
                 <div class="text-group">EAPP <span class="sub">Ms. Masangcay</span></div>
-                <div class="state-group">
-                  <label class="state-label"><input type="radio" name="mon-1230" value="attended">Att</label>
-                  <label class="state-label"><input type="radio" name="mon-1230" value="late">Late</label>
-                  <label class="state-label"><input type="radio" name="mon-1230" value="absent">Abs</label>
+                <div class="control-row">
+                  <div class="state-group">
+                    <label class="state-label"><input type="radio" name="mon-1230" value="attended">Att</label>
+                    <label class="state-label"><input type="radio" name="mon-1230" value="late">Late</label>
+                    <label class="state-label"><input type="radio" name="mon-1230" value="absent">Abs</label>
+                  </div>
+                  <label class="untaught-label" title="Teacher attended but did not teach"><input type="checkbox" class="untaught-check" data-slot="mon-1230">unt</label>
                 </div>
-                <input type="text" class="reason-box" data-slot="mon-1230" placeholder="State reason...">
+                <div class="dynamic-inputs">
+                  <input type="text" class="arrival-box" data-slot="mon-1230" placeholder="Arrival time (e.g. 12:45)...">
+                  <input type="text" class="reason-box" data-slot="mon-1230" placeholder="State reason/context...">
+                </div>
               </div>
             </td>
             <td data-day="tue">
               <div class="cell-card t-eapp" data-teacher="Ms. Masangcay">
                 <div class="text-group">EAPP <span class="sub">Ms. Masangcay</span></div>
-                <div class="state-group">
-                  <label class="state-label"><input type="radio" name="tue-1230" value="attended">Att</label>
-                  <label class="state-label"><input type="radio" name="tue-1230" value="late">Late</label>
-                  <label class="state-label"><input type="radio" name="tue-1230" value="absent">Abs</label>
+                <div class="control-row">
+                  <div class="state-group">
+                    <label class="state-label"><input type="radio" name="tue-1230" value="attended">Att</label>
+                    <label class="state-label"><input type="radio" name="tue-1230" value="late">Late</label>
+                    <label class="state-label"><input type="radio" name="tue-1230" value="absent">Abs</label>
+                  </div>
+                  <label class="untaught-label" title="Teacher attended but did not teach"><input type="checkbox" class="untaught-check" data-slot="tue-1230">unt</label>
                 </div>
-                <input type="text" class="reason-box" data-slot="tue-1230" placeholder="State reason...">
+                <div class="dynamic-inputs">
+                  <input type="text" class="arrival-box" data-slot="tue-1230" placeholder="Arrival time (e.g. 12:45)...">
+                  <input type="text" class="reason-box" data-slot="tue-1230" placeholder="State reason/context...">
+                </div>
               </div>
             </td>
             <td data-day="wed">
               <div class="cell-card t-peh" data-teacher="Ms. Medrano">
                 <div class="text-group">PEH 3 <span class="sub">Ms. Medrano</span></div>
-                <div class="state-group">
-                  <label class="state-label"><input type="radio" name="wed-1230" value="attended">Att</label>
-                  <label class="state-label"><input type="radio" name="wed-1230" value="late">Late</label>
-                  <label class="state-label"><input type="radio" name="wed-1230" value="absent">Abs</label>
+                <div class="control-row">
+                  <div class="state-group">
+                    <label class="state-label"><input type="radio" name="wed-1230" value="attended">Att</label>
+                    <label class="state-label"><input type="radio" name="wed-1230" value="late">Late</label>
+                    <label class="state-label"><input type="radio" name="wed-1230" value="absent">Abs</label>
+                  </div>
+                  <label class="untaught-label" title="Teacher attended but did not teach"><input type="checkbox" class="untaught-check" data-slot="wed-1230">unt</label>
                 </div>
-                <input type="text" class="reason-box" data-slot="wed-1230" placeholder="State reason...">
+                <div class="dynamic-inputs">
+                  <input type="text" class="arrival-box" data-slot="wed-1230" placeholder="Arrival time (e.g. 12:45)...">
+                  <input type="text" class="reason-box" data-slot="wed-1230" placeholder="State reason/context...">
+                </div>
               </div>
             </td>
             <td data-day="thu">
               <div class="cell-card t-mil" data-teacher="Ms. Masangcay">
                 <div class="text-group">MIL <span class="sub">Ms. Masangcay</span></div>
-                <div class="state-group">
-                  <label class="state-label"><input type="radio" name="thu-1230" value="attended">Att</label>
-                  <label class="state-label"><input type="radio" name="thu-1230" value="late">Late</label>
-                  <label class="state-label"><input type="radio" name="thu-1230" value="absent">Abs</label>
+                <div class="control-row">
+                  <div class="state-group">
+                    <label class="state-label"><input type="radio" name="thu-1230" value="attended">Att</label>
+                    <label class="state-label"><input type="radio" name="thu-1230" value="late">Late</label>
+                    <label class="state-label"><input type="radio" name="thu-1230" value="absent">Abs</label>
+                  </div>
+                  <label class="untaught-label" title="Teacher attended but did not teach"><input type="checkbox" class="untaught-check" data-slot="thu-1230">unt</label>
                 </div>
-                <input type="text" class="reason-box" data-slot="thu-1230" placeholder="State reason...">
+                <div class="dynamic-inputs">
+                  <input type="text" class="arrival-box" data-slot="thu-1230" placeholder="Arrival time (e.g. 12:45)...">
+                  <input type="text" class="reason-box" data-slot="thu-1230" placeholder="State reason/context...">
+                </div>
               </div>
             </td>
             <td data-day="fri">
               <div class="cell-card t-mil" data-teacher="Ms. Masangcay">
                 <div class="text-group">MIL <span class="sub">Ms. Masangcay</span></div>
-                <div class="state-group">
-                  <label class="state-label"><input type="radio" name="fri-1230" value="attended">Att</label>
-                  <label class="state-label"><input type="radio" name="fri-1230" value="late">Late</label>
-                  <label class="state-label"><input type="radio" name="fri-1230" value="absent">Abs</label>
+                <div class="control-row">
+                  <div class="state-group">
+                    <label class="state-label"><input type="radio" name="fri-1230" value="attended">Att</label>
+                    <label class="state-label"><input type="radio" name="fri-1230" value="late">Late</label>
+                    <label class="state-label"><input type="radio" name="fri-1230" value="absent">Abs</label>
+                  </div>
+                  <label class="untaught-label" title="Teacher attended but did not teach"><input type="checkbox" class="untaught-check" data-slot="fri-1230">unt</label>
                 </div>
-                <input type="text" class="reason-box" data-slot="fri-1230" placeholder="State reason...">
+                <div class="dynamic-inputs">
+                  <input type="text" class="arrival-box" data-slot="fri-1230" placeholder="Arrival time (e.g. 12:45)...">
+                  <input type="text" class="reason-box" data-slot="fri-1230" placeholder="State reason/context...">
+                </div>
               </div>
             </td>
           </tr>
@@ -864,35 +1055,53 @@
             <td data-day="mon">
               <div class="cell-card t-mil" data-teacher="Ms. Masangcay">
                 <div class="text-group">MIL <span class="sub">Ms. Masangcay</span></div>
-                <div class="state-group">
-                  <label class="state-label"><input type="radio" name="mon-1400" value="attended">Att</label>
-                  <label class="state-label"><input type="radio" name="mon-1400" value="late">Late</label>
-                  <label class="state-label"><input type="radio" name="mon-1400" value="absent">Abs</label>
+                <div class="control-row">
+                  <div class="state-group">
+                    <label class="state-label"><input type="radio" name="mon-1400" value="attended">Att</label>
+                    <label class="state-label"><input type="radio" name="mon-1400" value="late">Late</label>
+                    <label class="state-label"><input type="radio" name="mon-1400" value="absent">Abs</label>
+                  </div>
+                  <label class="untaught-label" title="Teacher attended but did not teach"><input type="checkbox" class="untaught-check" data-slot="mon-1400">unt</label>
                 </div>
-                <input type="text" class="reason-box" data-slot="mon-1400" placeholder="State reason...">
+                <div class="dynamic-inputs">
+                  <input type="text" class="arrival-box" data-slot="mon-1400" placeholder="Arrival time (e.g. 2:15)...">
+                  <input type="text" class="reason-box" data-slot="mon-1400" placeholder="State reason/context...">
+                </div>
               </div>
             </td>
             <td data-day="tue">
               <div class="cell-card t-mil" data-teacher="Ms. Masangcay">
                 <div class="text-group">MIL <span class="sub">Ms. Masangcay</span></div>
-                <div class="state-group">
-                  <label class="state-label"><input type="radio" name="tue-1400" value="attended">Att</label>
-                  <label class="state-label"><input type="radio" name="tue-1400" value="late">Late</label>
-                  <label class="state-label"><input type="radio" name="tue-1400" value="absent">Abs</label>
+                <div class="control-row">
+                  <div class="state-group">
+                    <label class="state-label"><input type="radio" name="tue-1400" value="attended">Att</label>
+                    <label class="state-label"><input type="radio" name="tue-1400" value="late">Late</label>
+                    <label class="state-label"><input type="radio" name="tue-1400" value="absent">Abs</label>
+                  </div>
+                  <label class="untaught-label" title="Teacher attended but did not teach"><input type="checkbox" class="untaught-check" data-slot="tue-1400">unt</label>
                 </div>
-                <input type="text" class="reason-box" data-slot="tue-1400" placeholder="State reason...">
+                <div class="dynamic-inputs">
+                  <input type="text" class="arrival-box" data-slot="tue-1400" placeholder="Arrival time (e.g. 2:15)...">
+                  <input type="text" class="reason-box" data-slot="tue-1400" placeholder="State reason/context...">
+                </div>
               </div>
             </td>
             <td class="empty-cell" data-day="wed">—</td>
             <td data-day="thu">
               <div class="cell-card t-peh" data-teacher="Ms. Medrano">
                 <div class="text-group">PEH 3 <span class="sub">Ms. Medrano</span></div>
-                <div class="state-group">
-                  <label class="state-label"><input type="radio" name="thu-1400" value="attended">Att</label>
-                  <label class="state-label"><input type="radio" name="thu-1400" value="late">Late</label>
-                  <label class="state-label"><input type="radio" name="thu-1400" value="absent">Abs</label>
+                <div class="control-row">
+                  <div class="state-group">
+                    <label class="state-label"><input type="radio" name="thu-1400" value="attended">Att</label>
+                    <label class="state-label"><input type="radio" name="thu-1400" value="late">Late</label>
+                    <label class="state-label"><input type="radio" name="thu-1400" value="absent">Abs</label>
+                  </div>
+                  <label class="untaught-label" title="Teacher attended but did not teach"><input type="checkbox" class="untaught-check" data-slot="thu-1400">unt</label>
                 </div>
-                <input type="text" class="reason-box" data-slot="thu-1400" placeholder="State reason...">
+                <div class="dynamic-inputs">
+                  <input type="text" class="arrival-box" data-slot="thu-1400" placeholder="Arrival time (e.g. 2:15)...">
+                  <input type="text" class="reason-box" data-slot="thu-1400" placeholder="State reason/context...">
+                </div>
               </div>
             </td>
             <td class="empty-cell" data-day="fri">—</td>
@@ -902,7 +1111,6 @@
     </div>
   </div>
 
-  <!-- Absolute Totals Consolidated View Page -->
   <div id="totalsPageContainer">
     <div class="section-label">Absolute Course Accumulation Metrics (All Weeks)</div>
     <div class="table-container">
@@ -913,6 +1121,7 @@
             <th>Primary Handling Faculty</th>
             <th class="text-center">Cumulative Absences (Abs)</th>
             <th class="text-center">Cumulative Tardy Marks (Late)</th>
+            <th class="text-center">Classes unt (unt)</th>
           </tr>
         </thead>
         <tbody>
@@ -921,30 +1130,35 @@
             <td><span style="color:var(--muted)">All Combined Classes</span></td>
             <td class="text-center stat-accent-abs" id="grand-student-abs">0</td>
             <td class="text-center stat-accent-late" id="grand-student-late">0</td>
+            <td class="text-center" style="color: var(--muted)">—</td>
           </tr>
           <tr>
             <td>Introduction to Philosophy</td>
             <td>Ms. Medrano</td>
             <td class="text-center stat-accent-abs" id="t-medrano-abs">0</td>
             <td class="text-center stat-accent-late" id="t-medrano-late">0</td>
+            <td class="text-center stat-accent-untaught" id="t-medrano-untaught">0</td>
           </tr>
           <tr>
             <td>Understanding Culture, Society & Politics</td>
             <td>Ms. Ellazar</td>
             <td class="text-center stat-accent-abs" id="t-ellazar-abs">0</td>
             <td class="text-center stat-accent-late" id="t-ellazar-late">0</td>
+            <td class="text-center stat-accent-untaught" id="t-ellazar-untaught">0</td>
           </tr>
           <tr>
             <td>English & Media Literacy Components</td>
             <td>Ms. Masangcay</td>
             <td class="text-center stat-accent-abs" id="t-masangcay-abs">0</td>
             <td class="text-center stat-accent-late" id="t-masangcay-late">0</td>
+            <td class="text-center stat-accent-untaught" id="t-masangcay-untaught">0</td>
           </tr>
           <tr>
             <td>Apprenticeship & Exploration Program</td>
             <td>Mr. Divino</td>
             <td class="text-center stat-accent-abs" id="t-divino-abs">0</td>
             <td class="text-center stat-accent-late" id="t-divino-late">0</td>
+            <td class="text-center stat-accent-untaught" id="t-divino-untaught">0</td>
           </tr>
         </tbody>
       </table>
@@ -1022,24 +1236,19 @@
       </div>
       <div class="glossary-item">
         <span class="glossary-term g-late">Late</span>
-        <span class="glossary-desc">Late arrival. Requires inputting a specific context reason.</span>
+        <span class="glossary-desc">Late arrival. Exposes fields for Arrival Time and reason context.</span>
       </div>
       <div class="glossary-item">
         <span class="glossary-term g-abs">Abs</span>
         <span class="glossary-desc">Absent. Flagged context requires mandatory reason entry.</span>
       </div>
       <div class="glossary-item">
-        <span class="glossary-term">◷</span>
-        <span class="glossary-desc">Day Tardy. Flags the student as late/tardy for that specific calendar school day date.</span>
-      </div>
-      <div class="glossary-item">
-        <span class="glossary-term">⦸</span>
-        <span class="glossary-desc">Day Exclusion. Mutes the entire target column when the student is entirely absent from school for that specific date.</span>
+        <span class="glossary-term g-untaught">unt</span>
+        <span class="glossary-desc">unt. Active when checked; flags that the teacher was present but did not conduct an actual lesson.</span>
       </div>
     </div>
   </div>
 
-  <!-- Data Operations Control Panel -->
   <div class="data-operations-panel">
     <div class="section-label">Data Operations & Safety Controls</div>
     <div class="ops-box">
@@ -1065,42 +1274,51 @@
   const totalsPageContainer = document.getElementById('totalsPageContainer');
   
   const radioInputs = document.querySelectorAll('.state-group input[type="radio"]');
+  const untaughtCheckboxes = document.querySelectorAll('.untaught-check');
   const reasonInputs = document.querySelectorAll('.reason-box');
+  const arrivalInputs = document.querySelectorAll('.arrival-box');
 
   let activeWeek = parseInt(localStorage.getItem('bphscaActiveWeek')) || 1;
   let isDisplayingGrandTotals = false;
   
   let database = {};
   let reasonsDatabase = {};
+  let arrivalDatabase = {};
+  let untaughtDatabase = {};
   let studentAbsenceDatabase = {}; 
 
   function initDatabaseSync() {
     try {
       database = JSON.parse(localStorage.getItem('bphscaCheckboxes')) || {};
       reasonsDatabase = JSON.parse(localStorage.getItem('bphscaReasons')) || {};
+      arrivalDatabase = JSON.parse(localStorage.getItem('bphscaArrivals')) || {};
+      untaughtDatabase = JSON.parse(localStorage.getItem('bphscaUntaught')) || {};
       studentAbsenceDatabase = JSON.parse(localStorage.getItem('bphscaStudentAbsences')) || {};
     } catch (e) {
       database = {};
       reasonsDatabase = {};
+      arrivalDatabase = {};
+      untaughtDatabase = {};
       studentAbsenceDatabase = {};
     }
   }
 
   function calculateCounters() {
     const weeklyCounts = {
-      "Ms. Medrano": { abs: 0, late: 0 },
-      "Ms. Ellazar": { abs: 0, late: 0 },
-      "Ms. Masangcay": { abs: 0, late: 0 },
-      "Mr. Divino": { abs: 0, late: 0 }
+      "Ms. Medrano": { abs: 0, late: 0, untaught: 0 },
+      "Ms. Ellazar": { abs: 0, late: 0, untaught: 0 },
+      "Ms. Masangcay": { abs: 0, late: 0, untaught: 0 },
+      "Mr. Divino": { abs: 0, late: 0, untaught: 0 }
     };
 
     const globalCounts = {
-      "Ms. Medrano": { abs: 0, late: 0 },
-      "Ms. Ellazar": { abs: 0, late: 0 },
-      "Ms. Masangcay": { abs: 0, late: 0 },
-      "Mr. Divino": { abs: 0, late: 0 }
+      "Ms. Medrano": { abs: 0, late: 0, untaught: 0 },
+      "Ms. Ellazar": { abs: 0, late: 0, untaught: 0 },
+      "Ms. Masangcay": { abs: 0, late: 0, untaught: 0 },
+      "Mr. Divino": { abs: 0, late: 0, untaught: 0 }
     };
 
+    // Calculate Absence and Lateness metrics
     Object.keys(database).forEach(key => {
       const match = key.match(/^W(\d+)-(.*)$/);
       if (match) {
@@ -1120,6 +1338,29 @@
               if (wNum === activeWeek) {
                 if (value === 'absent') weeklyCounts[teacher].abs++;
                 if (value === 'late') weeklyCounts[teacher].late++;
+              }
+            }
+          }
+        }
+      }
+    });
+
+    // Calculate unt metrics separately from unt state tracking object
+    Object.keys(untaughtDatabase).forEach(key => {
+      const match = key.match(/^W(\d+)-(.*)$/);
+      if (match && untaughtDatabase[key] === true) {
+        const wNum = parseInt(match[1]);
+        const slotName = match[2];
+        
+        const targetCheck = document.querySelector(`.untaught-check[data-slot="${slotName}"]`);
+        if (targetCheck) {
+          const card = targetCheck.closest('.cell-card');
+          if (card) {
+            const teacher = card.getAttribute('data-teacher');
+            if (globalCounts[teacher]) {
+              globalCounts[teacher].untaught++;
+              if (wNum === activeWeek) {
+                weeklyCounts[teacher].untaught++;
               }
             }
           }
@@ -1153,6 +1394,7 @@
         if (card) {
           card.querySelector('.abs-count').innerHTML = `${globalCounts[teacher].abs}<span class="lbl">Abs</span>`;
           card.querySelector('.late-count').innerHTML = `${globalCounts[teacher].late}<span class="lbl">Late</span>`;
+          card.querySelector('.untaught-count').innerHTML = `${globalCounts[teacher].untaught}<span class="lbl">unt</span>`;
         }
       });
     } else {
@@ -1163,20 +1405,29 @@
         if (card) {
           card.querySelector('.abs-count').innerHTML = `${weeklyCounts[teacher].abs}<span class="lbl">Abs</span>`;
           card.querySelector('.late-count').innerHTML = `${weeklyCounts[teacher].late}<span class="lbl">Late</span>`;
+          card.querySelector('.untaught-count').innerHTML = `${weeklyCounts[teacher].untaught}<span class="lbl">unt</span>`;
         }
       });
     }
 
     document.getElementById('grand-student-abs').textContent = grandStudentAbsTotal;
     document.getElementById('grand-student-late').textContent = grandStudentLateTotal;
+    
     document.getElementById('t-medrano-abs').textContent = globalCounts["Ms. Medrano"].abs;
     document.getElementById('t-medrano-late').textContent = globalCounts["Ms. Medrano"].late;
+    document.getElementById('t-medrano-untaught').textContent = globalCounts["Ms. Medrano"].untaught;
+
     document.getElementById('t-ellazar-abs').textContent = globalCounts["Ms. Ellazar"].abs;
     document.getElementById('t-ellazar-late').textContent = globalCounts["Ms. Ellazar"].late;
+    document.getElementById('t-ellazar-untaught').textContent = globalCounts["Ms. Ellazar"].untaught;
+
     document.getElementById('t-masangcay-abs').textContent = globalCounts["Ms. Masangcay"].abs;
     document.getElementById('t-masangcay-late').textContent = globalCounts["Ms. Masangcay"].late;
+    document.getElementById('t-masangcay-untaught').textContent = globalCounts["Ms. Masangcay"].untaught;
+
     document.getElementById('t-divino-abs').textContent = globalCounts["Mr. Divino"].abs;
     document.getElementById('t-divino-late').textContent = globalCounts["Mr. Divino"].late;
+    document.getElementById('t-divino-untaught').textContent = globalCounts["Mr. Divino"].untaught;
   }
 
   function toggleWholeDay(dayCode, targetStatus) {
@@ -1207,7 +1458,7 @@
       }
 
       document.querySelectorAll(`td[data-day="${day}"]`).forEach(td => {
-        td.className = ''; // reset first
+        td.className = ''; 
         if (status === 'absent') {
           td.classList.add(`day-muted-${day}`);
         } else if (status === 'late') {
@@ -1236,12 +1487,16 @@
       matrixLabel.textContent = 'Weekly Class Program Grid — Week ' + selectedWeek;
     }
 
+    // Clear active DOM views before loading from cache
     document.querySelectorAll('.state-group').forEach(group => {
       const activeCheckedInput = group.querySelector('input:checked');
       if(activeCheckedInput) activeCheckedInput.checked = false;
     });
+    untaughtCheckboxes.forEach(chk => chk.checked = false);
     reasonInputs.forEach(input => input.value = '');
+    arrivalInputs.forEach(input => input.value = '');
 
+    // Restore primary states from LocalStorage payload map index
     Object.keys(database).forEach(storageKey => {
       if (storageKey.startsWith('W' + selectedWeek + '-')) {
         const slotName = storageKey.replace('W' + selectedWeek + '-', '');
@@ -1254,12 +1509,35 @@
       }
     });
 
+    // Restore unt flags
+    Object.keys(untaughtDatabase).forEach(storageKey => {
+      if (storageKey.startsWith('W' + selectedWeek + '-')) {
+        const slotName = storageKey.replace('W' + selectedWeek + '-', '');
+        const targetCheck = document.querySelector(`.untaught-check[data-slot="${slotName}"]`);
+        if (targetCheck) {
+          targetCheck.checked = untaughtDatabase[storageKey];
+        }
+      }
+    });
+
+    // Restore contextual reason values
     Object.keys(reasonsDatabase).forEach(storageKey => {
       if (storageKey.startsWith('W' + selectedWeek + '-')) {
         const slotName = storageKey.replace('W' + selectedWeek + '-', '');
-        const targetInput = document.querySelector(`input[data-slot="${slotName}"]`);
+        const targetInput = document.querySelector(`input.reason-box[data-slot="${slotName}"]`);
         if (targetInput) {
           targetInput.value = reasonsDatabase[storageKey];
+        }
+      }
+    });
+
+    // Restore arrival timestamps
+    Object.keys(arrivalDatabase).forEach(storageKey => {
+      if (storageKey.startsWith('W' + selectedWeek + '-')) {
+        const slotName = storageKey.replace('W' + selectedWeek + '-', '');
+        const targetInput = document.querySelector(`input.arrival-box[data-slot="${slotName}"]`);
+        if (targetInput) {
+          targetInput.value = arrivalDatabase[storageKey];
         }
       }
     });
@@ -1295,20 +1573,52 @@
         this.checked = false;
         delete database[uniqueStorageKey];
         
+        // Wipe sub-states if removing core status
         delete reasonsDatabase[uniqueStorageKey];
-        const targetInput = document.querySelector(`input[data-slot="${slotName}"]`);
-        if (targetInput) targetInput.value = '';
+        delete arrivalDatabase[uniqueStorageKey];
+        delete untaughtDatabase[uniqueStorageKey];
+        
+        const rInput = document.querySelector(`input.reason-box[data-slot="${slotName}"]`);
+        const aInput = document.querySelector(`input.arrival-box[data-slot="${slotName}"]`);
+        const uCheck = document.querySelector(`.untaught-check[data-slot="${slotName}"]`);
+        
+        if (rInput) rInput.value = '';
+        if (aInput) aInput.value = '';
+        if (uCheck) uCheck.checked = false;
       } else {
         database[uniqueStorageKey] = this.value;
-        if (this.value === 'attended') {
-          delete reasonsDatabase[uniqueStorageKey];
-          const targetInput = document.querySelector(`input[data-slot="${slotName}"]`);
-          if (targetInput) targetInput.value = '';
+        // If changed to absent, wipe arrival time
+        if (this.value === 'absent' || this.value === 'attended') {
+          delete arrivalDatabase[uniqueStorageKey];
+          const aInput = document.querySelector(`input.arrival-box[data-slot="${slotName}"]`);
+          if (aInput) aInput.value = '';
+        }
+        if (this.value === 'absent') {
+          delete untaughtDatabase[uniqueStorageKey];
+          const uCheck = document.querySelector(`.untaught-check[data-slot="${slotName}"]`);
+          if (uCheck) uCheck.checked = false;
         }
       }
 
       localStorage.setItem('bphscaCheckboxes', JSON.stringify(database));
       localStorage.setItem('bphscaReasons', JSON.stringify(reasonsDatabase));
+      localStorage.setItem('bphscaArrivals', JSON.stringify(arrivalDatabase));
+      localStorage.setItem('bphscaUntaught', JSON.stringify(untaughtDatabase));
+      calculateCounters();
+    });
+  });
+
+  untaughtCheckboxes.forEach(chk => {
+    chk.addEventListener('change', function() {
+      const slotName = this.getAttribute('data-slot');
+      const uniqueStorageKey = 'W' + activeWeek + '-' + slotName;
+
+      if (this.checked) {
+        untaughtDatabase[uniqueStorageKey] = true;
+      } else {
+        delete untaughtDatabase[uniqueStorageKey];
+      }
+      localStorage.setItem('bphscaUntaught', JSON.stringify(untaughtDatabase));
       calculateCounters();
     });
   });
@@ -1327,13 +1637,29 @@
     });
   });
 
+  arrivalInputs.forEach(input => {
+    input.addEventListener('input', function() {
+      const slotName = this.getAttribute('data-slot');
+      const uniqueStorageKey = 'W' + activeWeek + '-' + slotName;
+
+      if (this.value.trim() === '') {
+        delete arrivalDatabase[uniqueStorageKey];
+      } else {
+        arrivalDatabase[uniqueStorageKey] = this.value;
+      }
+      localStorage.setItem('bphscaArrivals', JSON.stringify(arrivalDatabase));
+    });
+  });
+
   /* File Operation Engine Modules */
   function exportDataBackup() {
     const backupPayload = {
-      version: "1.2",
+      version: "1.3",
       timestamp: new Date().toISOString(),
       checkboxes: database,
       reasons: reasonsDatabase,
+      arrivals: arrivalDatabase,
+      untaught: untaughtDatabase,
       studentAbsences: studentAbsenceDatabase
     };
 
@@ -1368,14 +1694,10 @@
         const parsedPayload = JSON.parse(e.target.result);
         
         if (parsedPayload.checkboxes && parsedPayload.reasons && parsedPayload.studentAbsences) {
-          Object.keys(parsedPayload.studentAbsences).forEach(key => {
-            if (parsedPayload.studentAbsences[key] === true) {
-              parsedPayload.studentAbsences[key] = 'absent';
-            }
-          });
-
           localStorage.setItem('bphscaCheckboxes', JSON.stringify(parsedPayload.checkboxes));
           localStorage.setItem('bphscaReasons', JSON.stringify(parsedPayload.reasons));
+          localStorage.setItem('bphscaArrivals', JSON.stringify(parsedPayload.arrivals || {}));
+          localStorage.setItem('bphscaUntaught', JSON.stringify(parsedPayload.untaught || {}));
           localStorage.setItem('bphscaStudentAbsences', JSON.stringify(parsedPayload.studentAbsences));
           
           alert("Backup data payload integrated successfully into local cache storage.");
