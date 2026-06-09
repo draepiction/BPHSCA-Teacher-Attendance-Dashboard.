@@ -35,7 +35,7 @@ This system operates entirely on the client side with absolute transparency, sto
 *   **Phil.:** Introduction to the Philosophy of the Human Person
 *   **UCSP:** Understanding Culture, Society, and Politics
 *   **EAPP:** English for Academic and Professional Purposes
-*   **A&E / Arts:** Contemporary Philippine Arts from the Regions
+*   **A&E:** Apprenticeship & Exploration (Mr. Divino)
 *   **MIL:** Media and Information Literacy
 *   **PEH 3:** Physical Education and Health 3
 *   **HGP:** Homeroom Guidance Program
