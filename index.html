@@ -550,7 +550,7 @@
   <div class="section-label" id="panelContextLabel">Attendance Metrics Dashboard (Active Week)</div>
   <div class="metrics-panel">
     <div class="metric-card student-card">
-      <span class="metric-title">Martija <em>(Student)</em></span>
+      <span class="metric-title">Mr. Martija <em>(Student)</em></span>
       <div class="metrics-values">
         <span class="metric-val abs-count" id="stat-student-abs">0<span class="lbl">Abs</span></span>
         <span class="metric-val late-count" id="stat-student-late">0<span class="lbl">Late</span></span>
@@ -941,7 +941,7 @@
             <td class="text-center stat-accent-late" id="t-masangcay-late">0</td>
           </tr>
           <tr>
-            <td>Contemporary Philippine Arts Component</td>
+            <td>Apprenticeship & Exploration Program</td>
             <td>Mr. Divino</td>
             <td class="text-center stat-accent-abs" id="t-divino-abs">0</td>
             <td class="text-center stat-accent-late" id="t-divino-late">0</td>
@@ -985,8 +985,8 @@
       <div class="legend-item">
         <div class="legend-color-dot" style="background: var(--ae-accent)"></div>
         <div class="legend-details">
-          <span class="legend-name">A&E / Arts</span>
-          <span class="legend-full">Contemporary Philippine Arts from the Regions</span>
+          <span class="legend-name">A&E</span>
+          <span class="legend-full">Apprenticeship & Exploration</span>
         </div>
       </div>
       <div class="legend-item">
@@ -1368,7 +1368,6 @@
         const parsedPayload = JSON.parse(e.target.result);
         
         if (parsedPayload.checkboxes && parsedPayload.reasons && parsedPayload.studentAbsences) {
-          // Compatibility handling for older V1.1 structure variants
           Object.keys(parsedPayload.studentAbsences).forEach(key => {
             if (parsedPayload.studentAbsences[key] === true) {
               parsedPayload.studentAbsences[key] = 'absent';
