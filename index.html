@@ -1,0 +1,1403 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BPHSCA Attendance Dashboard</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=DM+Mono:wght@300;400;500&display=swap" rel="stylesheet">
+
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      color-scheme: dark; 
+
+      --font-display: 'Instrument Serif', Georgia, serif;
+      --font-mono: 'DM Mono', 'Courier New', monospace;
+      --bg: #0e0e0e;
+      --bg2: #161616;
+      --bg3: #1f1f1f;
+      --border: #2a2a2a;
+      --text: #e4e0d8;
+      --muted: #6b6860;
+      --accent: #c9a96e;
+
+      /* Status Palette Colors */
+      --color-att: #2d6a4f;
+      --color-late: #d97706;
+      --color-abs: #b91c1c;
+
+      /* Subject Palette Constants */
+      --phil-bg:    #2a1a05; --phil-fg:    #f0c07a; --phil-accent: #c07830;
+      --ucsp-bg:    #062440; --ucsp-fg:    #8ec4f0; --ucsp-accent: #2a7ec0;
+      --eapp-bg:    #1a1830; --eapp-fg:    #b8b4f5; --eapp-accent: #5855c0;
+      --ae-bg:      #052820; --ae-fg:      #7ddcb8; --ae-accent:   #1a9060;
+      --mil-bg:     #2a0d18; --mil-fg:     #f0aec8; --mil-accent:  #902050;
+      --peh-bg:     #0d2205; --peh-fg:     #a8d47a; --peh-accent:  #2a6010;
+      --hgp-bg:     #33103c; --hgp-fg:     #e2a4f7; --hgp-accent:  #b336d4;
+      --hsa-bg:     #1a1a18; --hsa-fg:     #c8c5bc; --hsa-accent:  #444440;
+    }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--font-mono);
+      min-height: 100vh;
+      padding: 2rem 1.25rem;
+    }
+
+    .wrap {
+      max-width: 1140px;
+      margin: 0 auto;
+    }
+
+    .header {
+      margin-bottom: 1.5rem;
+      border-bottom: 0.5px solid var(--border);
+      padding-bottom: 1.25rem;
+    }
+    .header-title {
+      font-family: var(--font-display);
+      font-size: 2.5rem;
+      color: var(--text);
+    }
+    .header-title em {
+      color: var(--accent);
+      font-style: italic;
+    }
+    .header-sub {
+      font-size: 11px;
+      color: var(--muted);
+      margin-top: 6px;
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+    }
+
+    .section-label {
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: 0.75rem;
+    }
+
+    .week-selector {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 1.5rem;
+      overflow-x: auto;
+      align-items: center;
+    }
+    .week-btn {
+      background: var(--bg2);
+      border: 0.5px solid var(--border);
+      color: var(--muted);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      padding: 8px 14px;
+      border-radius: 4px;
+      cursor: pointer;
+      white-space: nowrap;
+    }
+    .week-btn:hover {
+      border-color: var(--muted);
+      color: var(--text);
+    }
+    .week-btn.active {
+      background: var(--bg3);
+      border-color: var(--accent);
+      color: var(--accent);
+      font-weight: bold;
+    }
+    
+    .totals-toggle-btn {
+      margin-left: auto;
+      background: rgba(201, 169, 110, 0.05);
+      border: 0.5px solid var(--accent);
+      color: var(--accent);
+    }
+    .totals-toggle-btn.active {
+      background: var(--accent);
+      color: var(--bg);
+    }
+
+    .metrics-panel {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 8px;
+      margin-bottom: 1.75rem;
+    }
+    .metric-card {
+      background: var(--bg2);
+      border: 0.5px solid var(--border);
+      border-radius: 4px;
+      padding: 8px 10px;
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+    .metric-card.student-card {
+      border-color: var(--accent);
+      background: rgba(201, 169, 110, 0.03);
+    }
+    .metric-title {
+      font-size: 9px;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+    .metric-title em {
+      font-style: normal;
+      color: var(--text);
+    }
+    .metrics-values {
+      font-size: 13px;
+      font-weight: bold;
+      color: var(--text);
+      display: flex;
+      gap: 10px;
+    }
+    .metric-val .lbl {
+      font-size: 8.5px;
+      color: var(--muted);
+      font-weight: normal;
+      text-transform: uppercase;
+      margin-left: 2px;
+    }
+    .metric-val.abs-count { color: #f25c5c; }
+    .metric-val.late-count { color: #f59e0b; }
+
+    .table-container {
+      width: 100%;
+      border: 0.5px solid var(--border);
+      border-radius: 8px;
+      background: var(--bg2);
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 11.5px;
+      min-width: 950px;
+    }
+
+    th, td {
+      border: 0.5px solid var(--border);
+      padding: 10px;
+      vertical-align: middle;
+      transition: opacity 0.2s ease, background-color 0.2s ease;
+    }
+
+    th {
+      color: var(--muted);
+      text-transform: uppercase;
+      font-size: 10px;
+      background: var(--bg);
+      position: relative;
+    }
+
+    .day-header {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .day-controls {
+      display: flex;
+      gap: 3px;
+    }
+    .day-toggle {
+      background: none;
+      border: none;
+      color: var(--muted);
+      cursor: pointer;
+      font-size: 11px;
+      opacity: 0.5;
+      padding: 2px 4px;
+      line-height: 1;
+      border-radius: 3px;
+    }
+    .day-toggle:hover {
+      opacity: 1;
+      color: var(--text);
+      background: var(--bg3);
+    }
+    th.day-hidden .day-toggle-abs {
+      color: var(--color-abs);
+      opacity: 1;
+    }
+    th.day-tardy .day-toggle-late {
+      color: var(--color-late);
+      opacity: 1;
+    }
+
+    th.day-hidden {
+      background: #151011;
+      color: rgba(239, 68, 68, 0.4);
+    }
+    th.day-tardy {
+      background: #151310;
+      color: rgba(217, 119, 6, 0.5);
+    }
+    
+    td.day-muted-mon, td.day-muted-tue, td.day-muted-wed, td.day-muted-thu, td.day-muted-fri {
+      background: rgba(14, 14, 14, 0.75) !important;
+      opacity: 0.22;
+      pointer-events: none;
+    }
+    td.day-warn-mon, td.day-warn-tue, td.day-warn-wed, td.day-warn-thu, td.day-warn-fri {
+      background: rgba(217, 119, 6, 0.03);
+    }
+
+    .time-col {
+      width: 85px;
+      color: var(--muted);
+      background: var(--bg);
+      text-align: center;
+    }
+
+    .cell-card {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      padding: 8px;
+      border-radius: 4px;
+      border-left: 2px solid transparent;
+    }
+    .cell-card .text-group {
+      display: flex;
+      flex-direction: column;
+      line-height: 1.3;
+    }
+    .cell-card .sub {
+      font-size: 9.5px;
+      opacity: 0.6;
+      margin-top: 1px;
+    }
+
+    .state-group {
+      display: flex;
+      gap: 2px;
+      background: rgba(0,0,0,0.2);
+      padding: 2px;
+      border-radius: 4px;
+      border: 0.5px solid var(--border);
+    }
+    
+    .state-label {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 8px;
+      padding: 4px 0;
+      cursor: pointer;
+      border-radius: 2px;
+      color: var(--muted);
+      text-transform: uppercase;
+      font-weight: 600;
+      user-select: none;
+    }
+
+    .state-label input[type="radio"] {
+      display: none;
+    }
+
+    .state-label:has(input[value="attended"]:checked) {
+      background: var(--color-att);
+      color: #ffffff;
+    }
+    .state-label:has(input[value="late"]:checked) {
+      background: var(--color-late);
+      color: #ffffff;
+    }
+    .state-label:has(input[value="absent"]:checked) {
+      background: var(--color-abs);
+      color: #ffffff;
+    }
+
+    .cell-card:has(input[value="attended"]:checked) .text-group {
+      opacity: 0.35;
+      text-decoration: line-through;
+    }
+    .cell-card:has(input[value="absent"]:checked) .text-group {
+      opacity: 0.2;
+      text-decoration: line-through;
+    }
+
+    .reason-box {
+      display: none;
+      width: 100%;
+      background: rgba(0,0,0,0.4);
+      border: 0.5px solid var(--border);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 9.5px;
+      padding: 5px 6px;
+      border-radius: 3px;
+      outline: none;
+    }
+    .reason-box::placeholder {
+      color: var(--muted);
+    }
+    .reason-box:focus {
+      border-color: var(--accent);
+    }
+
+    .cell-card:has(input[value="late"]:checked) .reason-box,
+    .cell-card:has(input[value="absent"]:checked) .reason-box {
+      display: block;
+    }
+
+    .static-block {
+      padding: 8px;
+      font-size: 11px;
+    }
+
+    .t-phil  { background: var(--phil-bg);  color: var(--phil-fg);  border-left-color: var(--phil-accent); }
+    .t-ucsp  { background: var(--ucsp-bg);  color: var(--ucsp-fg);  border-left-color: var(--ucsp-accent); }
+    .t-eapp  { background: var(--eapp-bg);  color: var(--eapp-fg);  border-left-color: var(--eapp-accent); }
+    .t-ae    { background: var(--ae-bg);    color: var(--ae-fg);    border-left-color: var(--ae-accent); }
+    .t-mil   { background: var(--mil-bg);   color: var(--mil-fg);   border-left-color: var(--mil-accent); }
+    .t-peh   { background: var(--peh-bg);   color: var(--peh-fg);   border-left-color: var(--peh-accent); }
+    .t-hgp   { background: var(--hgp-bg);   color: var(--hgp-fg);   border-left-color: var(--hgp-accent); }
+    .t-hsa   { background: var(--hsa-bg);   color: var(--hsa-fg);   border-left-color: var(--hsa-accent); }
+
+    .empty-cell {
+      color: var(--muted);
+      opacity: 0.2;
+      text-align: center;
+    }
+
+    .subject-legend {
+      margin-top: 2.5rem;
+      border-top: 0.5px solid var(--border);
+      padding-top: 1.5rem;
+    }
+    .legend-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 12px;
+      margin-top: 0.75rem;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: var(--bg2);
+      border: 0.5px solid var(--border);
+      padding: 8px 12px;
+      border-radius: 4px;
+      font-size: 11px;
+    }
+    .legend-color-dot {
+      width: 4px;
+      height: 16px;
+      border-radius: 2px;
+    }
+    .legend-details {
+      display: flex;
+      flex-direction: column;
+    }
+    .legend-name {
+      color: var(--text);
+    }
+    .legend-full {
+      font-size: 10px;
+      color: var(--muted);
+      margin-top: 1px;
+    }
+
+    .system-glossary {
+      margin-top: 1.5rem;
+      border-top: 0.5px solid var(--border);
+      padding-top: 1.5rem;
+    }
+    .glossary-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+      gap: 10px;
+      margin-top: 0.75rem;
+    }
+    .glossary-item {
+      background: var(--bg2);
+      border: 0.5px solid var(--border);
+      padding: 10px;
+      border-radius: 4px;
+      font-size: 11px;
+      line-height: 1.4;
+    }
+    .glossary-term {
+      font-weight: bold;
+      color: var(--text);
+      display: inline-block;
+      margin-right: 4px;
+    }
+    .glossary-term.g-att { color: var(--color-att); }
+    .glossary-term.g-late { color: var(--color-late); }
+    .glossary-term.g-abs { color: var(--color-abs); }
+    .glossary-desc {
+      color: var(--muted);
+    }
+
+    /* Data Safety Panel Styles */
+    .data-operations-panel {
+      margin-top: 1.5rem;
+      border-top: 0.5px solid var(--border);
+      padding-top: 1.5rem;
+      margin-bottom: 3rem;
+    }
+    .ops-box {
+      background: var(--bg2);
+      border: 0.5px solid var(--border);
+      border-radius: 4px;
+      padding: 14px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+    }
+    .ops-desc {
+      font-size: 11px;
+      color: var(--muted);
+      flex: 1;
+      min-width: 280px;
+      line-height: 1.4;
+    }
+    .ops-actions {
+      display: flex;
+      gap: 8px;
+    }
+    .ops-btn {
+      background: var(--bg3);
+      border: 0.5px solid var(--border);
+      color: var(--text);
+      font-family: var(--font-mono);
+      font-size: 11px;
+      padding: 8px 14px;
+      border-radius: 4px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+    .ops-btn:hover {
+      border-color: var(--muted);
+      background: #262626;
+    }
+    .ops-btn-export {
+      border-color: rgba(201, 169, 110, 0.3);
+      color: var(--accent);
+    }
+    .ops-btn-export:hover {
+      background: rgba(201, 169, 110, 0.05);
+      border-color: var(--accent);
+    }
+    #hiddenImportEl {
+      display: none;
+    }
+
+    /* Absolute Totals Block Page */
+    #totalsPageContainer {
+      display: none;
+    }
+    .totals-table th {
+      text-align: left;
+      padding: 12px;
+    }
+    .totals-table td {
+      padding: 12px;
+    }
+    .text-center {
+      text-align: center !important;
+    }
+    .stat-accent-abs {
+      color: #f25c5c;
+      font-weight: bold;
+    }
+    .stat-accent-late {
+      color: #f59e0b;
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+
+<div class="wrap">
+  <div class="header">
+    <div class="header-title">BPHSCA <em>Dashboard</em></div>
+    <div class="header-sub">BPHSCA · G12 Kumintang · First Trimester SY 2026-2027</div>
+  </div>
+
+  <div class="section-label">Select Active Tracking Week</div>
+  <div class="week-selector">
+    <button type="button" class="week-btn" data-week="1">Week 1</button>
+    <button type="button" class="week-btn" data-week="2">Week 2</button>
+    <button type="button" class="week-btn" data-week="3">Week 3</button>
+    <button type="button" class="week-btn" data-week="4">Week 4</button>
+    <button type="button" class="week-btn" data-week="5">Week 5</button>
+    <button type="button" class="week-btn" data-week="6">Week 6</button>
+    <button type="button" class="week-btn" data-week="7">Week 7</button>
+    <button type="button" class="week-btn" data-week="8">Week 8</button>
+    <button type="button" class="week-btn" data-week="9">Week 9</button>
+    <button type="button" class="week-btn" data-week="10">Week 10</button>
+    <button type="button" class="week-btn" data-week="11">Week 11</button>
+    <button type="button" class="week-btn totals-toggle-btn" id="showTotalsBtn">Σ All Totals</button>
+  </div>
+
+  <div class="section-label" id="panelContextLabel">Attendance Metrics Dashboard (Active Week)</div>
+  <div class="metrics-panel">
+    <div class="metric-card student-card">
+      <span class="metric-title">Martija <em>(Student)</em></span>
+      <div class="metrics-values">
+        <span class="metric-val abs-count" id="stat-student-abs">0<span class="lbl">Abs</span></span>
+        <span class="metric-val late-count" id="stat-student-late">0<span class="lbl">Late</span></span>
+      </div>
+    </div>
+    <div class="metric-card" data-teacher="Ms. Medrano">
+      <span class="metric-title">Ms. Medrano</span>
+      <div class="metrics-values">
+        <span class="metric-val abs-count" id="medrano-abs">0<span class="lbl">Abs</span></span>
+        <span class="metric-val late-count" id="medrano-late">0<span class="lbl">Late</span></span>
+      </div>
+    </div>
+    <div class="metric-card" data-teacher="Ms. Ellazar">
+      <span class="metric-title">Ms. Ellazar</span>
+      <div class="metrics-values">
+        <span class="metric-val abs-count" id="ellazar-abs">0<span class="lbl">Abs</span></span>
+        <span class="metric-val late-count" id="ellazar-late">0<span class="lbl">Late</span></span>
+      </div>
+    </div>
+    <div class="metric-card" data-teacher="Ms. Masangcay">
+      <span class="metric-title">Ms. Masangcay</span>
+      <div class="metrics-values">
+        <span class="metric-val abs-count" id="masangcay-abs">0<span class="lbl">Abs</span></span>
+        <span class="metric-val late-count" id="masangcay-late">0<span class="lbl">Late</span></span>
+      </div>
+    </div>
+    <div class="metric-card" data-teacher="Mr. Divino">
+      <span class="metric-title">Mr. Divino</span>
+      <div class="metrics-values">
+        <span class="metric-val abs-count" id="divino-abs">0<span class="lbl">Abs</span></span>
+        <span class="metric-val late-count" id="divino-late">0<span class="lbl">Late</span></span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Weekly Grid View Target -->
+  <div id="weeklyGridContainer">
+    <div class="section-label" id="matrixLabel">Weekly Class Program Grid</div>
+    <div class="table-container">
+      <table>
+        <thead>
+          <tr>
+            <th class="time-col">Start</th>
+            <th class="time-col">End</th>
+            <th id="th-mon"><div class="day-header">Monday <div class="day-controls"><button type="button" class="day-toggle day-toggle-late" onclick="toggleWholeDay('mon', 'late')" title="Toggle student late status for this whole day">◷</button><button type="button" class="day-toggle day-toggle-abs" onclick="toggleWholeDay('mon', 'absent')" title="Toggle student absence for this whole day">⦸</button></div></div></th>
+            <th id="th-tue"><div class="day-header">Tuesday <div class="day-controls"><button type="button" class="day-toggle day-toggle-late" onclick="toggleWholeDay('tue', 'late')" title="Toggle student late status for this whole day">◷</button><button type="button" class="day-toggle day-toggle-abs" onclick="toggleWholeDay('tue', 'absent')" title="Toggle student absence for this whole day">⦸</button></div></div></th>
+            <th id="th-wed"><div class="day-header">Wednesday <div class="day-controls"><button type="button" class="day-toggle day-toggle-late" onclick="toggleWholeDay('wed', 'late')" title="Toggle student late status for this whole day">◷</button><button type="button" class="day-toggle day-toggle-abs" onclick="toggleWholeDay('wed', 'absent')" title="Toggle student absence for this whole day">⦸</button></div></div></th>
+            <th id="th-thu"><div class="day-header">Thursday <div class="day-controls"><button type="button" class="day-toggle day-toggle-late" onclick="toggleWholeDay('thu', 'late')" title="Toggle student late status for this whole day">◷</button><button type="button" class="day-toggle day-toggle-abs" onclick="toggleWholeDay('thu', 'absent')" title="Toggle student absence for this whole day">⦸</button></div></div></th>
+            <th id="th-fri"><div class="day-header">Friday <div class="day-controls"><button type="button" class="day-toggle day-toggle-late" onclick="toggleWholeDay('fri', 'late')" title="Toggle student late status for this whole day">◷</button><button type="button" class="day-toggle day-toggle-abs" onclick="toggleWholeDay('fri', 'absent')" title="Toggle student absence for this whole day">⦸</button></div></div></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td class="time-col">06:30</td>
+            <td class="time-col">07:00</td>
+            <td class="empty-cell" data-day="mon">—</td>
+            <td class="empty-cell" data-day="tue">—</td>
+            <td data-day="wed"><div class="static-block t-hsa">HSA</div></td>
+            <td class="empty-cell" data-day="thu">—</td>
+            <td class="empty-cell" data-day="fri">—</td>
+          </tr>
+          <tr>
+            <td class="time-col">07:00</td>
+            <td class="time-col">08:30</td>
+            <td data-day="mon">
+              <div class="cell-card t-phil" data-teacher="Ms. Medrano">
+                <div class="text-group">Phil. <span class="sub">Ms. Medrano</span></div>
+                <div class="state-group">
+                  <label class="state-label"><input type="radio" name="mon-0700" value="attended">Att</label>
+                  <label class="state-label"><input type="radio" name="mon-0700" value="late">Late</label>
+                  <label class="state-label"><input type="radio" name="mon-0700" value="absent">Abs</label>
+                </div>
+                <input type="text" class="reason-box" data-slot="mon-0700" placeholder="State reason...">
+              </div>
+            </td>
+            <td data-day="tue">
+              <div class="cell-card t-phil" data-teacher="Ms. Medrano">
+                <div class="text-group">Phil. <span class="sub">Ms. Medrano</span></div>
+                <div class="state-group">
+                  <label class="state-label"><input type="radio" name="tue-0700" value="attended">Att</label>
+                  <label class="state-label"><input type="radio" name="tue-0700" value="late">Late</label>
+                  <label class="state-label"><input type="radio" name="tue-0700" value="absent">Abs</label>
+                </div>
+                <input type="text" class="reason-box" data-slot="tue-0700" placeholder="State reason...">
+              </div>
+            </td>
+            <td data-day="wed">
+              <div class="cell-card t-phil" data-teacher="Ms. Medrano">
+                <div class="text-group">Phil. <span class="sub">Ms. Medrano</span></div>
+                <div class="state-group">
+                  <label class="state-label"><input type="radio" name="wed-0700" value="attended">Att</label>
+                  <label class="state-label"><input type="radio" name="wed-0700" value="late">Late</label>
+                  <label class="state-label"><input type="radio" name="wed-0700" value="absent">Abs</label>
+                </div>
+                <input type="text" class="reason-box" data-slot="wed-0700" placeholder="State reason...">
+              </div>
+            </td>
+            <td data-day="thu">
+              <div class="cell-card t-phil" data-teacher="Ms. Medrano">
+                <div class="text-group">Phil. <span class="sub">Ms. Medrano</span></div>
+                <div class="state-group">
+                  <label class="state-label"><input type="radio" name="thu-0700" value="attended">Att</label>
+                  <label class="state-label"><input type="radio" name="thu-0700" value="late">Late</label>
+                  <label class="state-label"><input type="radio" name="thu-0700" value="absent">Abs</label>
+                </div>
+                <input type="text" class="reason-box" data-slot="thu-0700" placeholder="State reason...">
+              </div>
+            </td>
+            <td data-day="fri">
+              <div class="cell-card t-hgp" data-teacher="Ms. Ellazar">
+                <div class="text-group">HGP <span class="sub">Ms. Ellazar</span></div>
+                <div class="state-group">
+                  <label class="state-label"><input type="radio" name="fri-0700" value="attended">Att</label>
+                  <label class="state-label"><input type="radio" name="fri-0700" value="late">Late</label>
+                  <label class="state-label"><input type="radio" name="fri-0700" value="absent">Abs</label>
+                </div>
+                <input type="text" class="reason-box" data-slot="fri-0700" placeholder="State reason...">
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td class="time-col">08:30</td>
+            <td class="time-col">10:00</td>
+            <td data-day="mon">
+              <div class="cell-card t-ucsp" data-teacher="Ms. Ellazar">
+                <div class="text-group">UCSP <span class="sub">Ms. Ellazar</span></div>
+                <div class="state-group">
+                  <label class="state-label"><input type="radio" name="mon-0830" value="attended">Att</label>
+                  <label class="state-label"><input type="radio" name="mon-0830" value="late">Late</label>
+                  <label class="state-label"><input type="radio" name="mon-0830" value="absent">Abs</label>
+                </div>
+                <input type="text" class="reason-box" data-slot="mon-0830" placeholder="State reason...">
+              </div>
+            </td>
+            <td data-day="tue">
+              <div class="cell-card t-ucsp" data-teacher="Ms. Ellazar">
+                <div class="text-group">UCSP <span class="sub">Ms. Ellazar</span></div>
+                <div class="state-group">
+                  <label class="state-label"><input type="radio" name="tue-0830" value="attended">Att</label>
+                  <label class="state-label"><input type="radio" name="tue-0830" value="late">Late</label>
+                  <label class="state-label"><input type="radio" name="tue-0830" value="absent">Abs</label>
+                </div>
+                <input type="text" class="reason-box" data-slot="tue-0830" placeholder="State reason...">
+              </div>
+            </td>
+            <td data-day="wed">
+              <div class="cell-card t-ucsp" data-teacher="Ms. Ellazar">
+                <div class="text-group">UCSP <span class="sub">Ms. Ellazar</span></div>
+                <div class="state-group">
+                  <label class="state-label"><input type="radio" name="wed-0830" value="attended">Att</label>
+                  <label class="state-label"><input type="radio" name="wed-0830" value="late">Late</label>
+                  <label class="state-label"><input type="radio" name="wed-0830" value="absent">Abs</label>
+                </div>
+                <input type="text" class="reason-box" data-slot="wed-0830" placeholder="State reason...">
+              </div>
+            </td>
+            <td data-day="thu">
+              <div class="cell-card t-eapp" data-teacher="Ms. Masangcay">
+                <div class="text-group">EAPP <span class="sub">Ms. Masangcay</span></div>
+                <div class="state-group">
+                  <label class="state-label"><input type="radio" name="thu-0830" value="attended">Att</label>
+                  <label class="state-label"><input type="radio" name="thu-0830" value="late">Late</label>
+                  <label class="state-label"><input type="radio" name="thu-0830" value="absent">Abs</label>
+                </div>
+                <input type="text" class="reason-box" data-slot="thu-0830" placeholder="State reason...">
+              </div>
+            </td>
+            <td data-day="fri">
+              <div class="cell-card t-eapp" data-teacher="Ms. Masangcay">
+                <div class="text-group">EAPP <span class="sub">Ms. Masangcay</span></div>
+                <div class="state-group">
+                  <label class="state-label"><input type="radio" name="fri-0830" value="attended">Att</label>
+                  <label class="state-label"><input type="radio" name="fri-0830" value="late">Late</label>
+                  <label class="state-label"><input type="radio" name="fri-0830" value="absent">Abs</label>
+                </div>
+                <input type="text" class="reason-box" data-slot="fri-0830" placeholder="State reason...">
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td class="time-col">10:00</td>
+            <td class="time-col">10:15</td>
+            <td colspan="5" style="text-align: center; background: #111; color: var(--muted); font-size: 10px;">MORNING BREAK</td>
+          </tr>
+          <tr>
+            <td class="time-col">10:15</td>
+            <td class="time-col">11:45</td>
+            <td data-day="mon">
+              <div class="cell-card t-ae" data-teacher="Mr. Divino">
+                <div class="text-group">A&E <span class="sub">Mr. Divino</span></div>
+                <div class="state-group">
+                  <label class="state-label"><input type="radio" name="mon-1015" value="attended">Att</label>
+                  <label class="state-label"><input type="radio" name="mon-1015" value="late">Late</label>
+                  <label class="state-label"><input type="radio" name="mon-1015" value="absent">Abs</label>
+                </div>
+                <input type="text" class="reason-box" data-slot="mon-1015" placeholder="State reason...">
+              </div>
+            </td>
+            <td data-day="tue">
+              <div class="cell-card t-ae" data-teacher="Mr. Divino">
+                <div class="text-group">A&E <span class="sub">Mr. Divino</span></div>
+                <div class="state-group">
+                  <label class="state-label"><input type="radio" name="tue-1015" value="attended">Att</label>
+                  <label class="state-label"><input type="radio" name="tue-1015" value="late">Late</label>
+                  <label class="state-label"><input type="radio" name="tue-1015" value="absent">Abs</label>
+                </div>
+                <input type="text" class="reason-box" data-slot="tue-1015" placeholder="State reason...">
+              </div>
+            </td>
+            <td data-day="wed">
+              <div class="cell-card t-ae" data-teacher="Mr. Divino">
+                <div class="text-group">A&E <span class="sub">Mr. Divino</span></div>
+                <div class="state-group">
+                  <label class="state-label"><input type="radio" name="wed-1015" value="attended">Att</label>
+                  <label class="state-label"><input type="radio" name="wed-1015" value="late">Late</label>
+                  <label class="state-label"><input type="radio" name="wed-1015" value="absent">Abs</label>
+                </div>
+                <input type="text" class="reason-box" data-slot="wed-1015" placeholder="State reason...">
+              </div>
+            </td>
+            <td data-day="thu">
+              <div class="cell-card t-ae" data-teacher="Mr. Divino">
+                <div class="text-group">A&E <span class="sub">Mr. Divino</span></div>
+                <div class="state-group">
+                  <label class="state-label"><input type="radio" name="thu-1015" value="attended">Att</label>
+                  <label class="state-label"><input type="radio" name="thu-1015" value="late">Late</label>
+                  <label class="state-label"><input type="radio" name="thu-1015" value="absent">Abs</label>
+                </div>
+                <input type="text" class="reason-box" data-slot="thu-1015" placeholder="State reason...">
+              </div>
+            </td>
+            <td data-day="fri">
+              <div class="cell-card t-ucsp" data-teacher="Ms. Ellazar">
+                <div class="text-group">UCSP <span class="sub">Ms. Ellazar</span></div>
+                <div class="state-group">
+                  <label class="state-label"><input type="radio" name="fri-1015" value="attended">Att</label>
+                  <label class="state-label"><input type="radio" name="fri-1015" value="late">Late</label>
+                  <label class="state-label"><input type="radio" name="fri-1015" value="absent">Abs</label>
+                </div>
+                <input type="text" class="reason-box" data-slot="fri-1015" placeholder="State reason...">
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td class="time-col">11:45</td>
+            <td class="time-col">12:30</td>
+            <td colspan="5" style="text-align: center; background: #111; color: var(--muted); font-size: 10px;">LUNCH BREAK</td>
+          </tr>
+          <tr>
+            <td class="time-col">12:30</td>
+            <td class="time-col">02:00</td>
+            <td data-day="mon">
+              <div class="cell-card t-eapp" data-teacher="Ms. Masangcay">
+                <div class="text-group">EAPP <span class="sub">Ms. Masangcay</span></div>
+                <div class="state-group">
+                  <label class="state-label"><input type="radio" name="mon-1230" value="attended">Att</label>
+                  <label class="state-label"><input type="radio" name="mon-1230" value="late">Late</label>
+                  <label class="state-label"><input type="radio" name="mon-1230" value="absent">Abs</label>
+                </div>
+                <input type="text" class="reason-box" data-slot="mon-1230" placeholder="State reason...">
+              </div>
+            </td>
+            <td data-day="tue">
+              <div class="cell-card t-eapp" data-teacher="Ms. Masangcay">
+                <div class="text-group">EAPP <span class="sub">Ms. Masangcay</span></div>
+                <div class="state-group">
+                  <label class="state-label"><input type="radio" name="tue-1230" value="attended">Att</label>
+                  <label class="state-label"><input type="radio" name="tue-1230" value="late">Late</label>
+                  <label class="state-label"><input type="radio" name="tue-1230" value="absent">Abs</label>
+                </div>
+                <input type="text" class="reason-box" data-slot="tue-1230" placeholder="State reason...">
+              </div>
+            </td>
+            <td data-day="wed">
+              <div class="cell-card t-peh" data-teacher="Ms. Medrano">
+                <div class="text-group">PEH 3 <span class="sub">Ms. Medrano</span></div>
+                <div class="state-group">
+                  <label class="state-label"><input type="radio" name="wed-1230" value="attended">Att</label>
+                  <label class="state-label"><input type="radio" name="wed-1230" value="late">Late</label>
+                  <label class="state-label"><input type="radio" name="wed-1230" value="absent">Abs</label>
+                </div>
+                <input type="text" class="reason-box" data-slot="wed-1230" placeholder="State reason...">
+              </div>
+            </td>
+            <td data-day="thu">
+              <div class="cell-card t-mil" data-teacher="Ms. Masangcay">
+                <div class="text-group">MIL <span class="sub">Ms. Masangcay</span></div>
+                <div class="state-group">
+                  <label class="state-label"><input type="radio" name="thu-1230" value="attended">Att</label>
+                  <label class="state-label"><input type="radio" name="thu-1230" value="late">Late</label>
+                  <label class="state-label"><input type="radio" name="thu-1230" value="absent">Abs</label>
+                </div>
+                <input type="text" class="reason-box" data-slot="thu-1230" placeholder="State reason...">
+              </div>
+            </td>
+            <td data-day="fri">
+              <div class="cell-card t-mil" data-teacher="Ms. Masangcay">
+                <div class="text-group">MIL <span class="sub">Ms. Masangcay</span></div>
+                <div class="state-group">
+                  <label class="state-label"><input type="radio" name="fri-1230" value="attended">Att</label>
+                  <label class="state-label"><input type="radio" name="fri-1230" value="late">Late</label>
+                  <label class="state-label"><input type="radio" name="fri-1230" value="absent">Abs</label>
+                </div>
+                <input type="text" class="reason-box" data-slot="fri-1230" placeholder="State reason...">
+              </div>
+            </td>
+          </tr>
+          <tr>
+            <td class="time-col">02:00</td>
+            <td class="time-col">03:30</td>
+            <td data-day="mon">
+              <div class="cell-card t-mil" data-teacher="Ms. Masangcay">
+                <div class="text-group">MIL <span class="sub">Ms. Masangcay</span></div>
+                <div class="state-group">
+                  <label class="state-label"><input type="radio" name="mon-1400" value="attended">Att</label>
+                  <label class="state-label"><input type="radio" name="mon-1400" value="late">Late</label>
+                  <label class="state-label"><input type="radio" name="mon-1400" value="absent">Abs</label>
+                </div>
+                <input type="text" class="reason-box" data-slot="mon-1400" placeholder="State reason...">
+              </div>
+            </td>
+            <td data-day="tue">
+              <div class="cell-card t-mil" data-teacher="Ms. Masangcay">
+                <div class="text-group">MIL <span class="sub">Ms. Masangcay</span></div>
+                <div class="state-group">
+                  <label class="state-label"><input type="radio" name="tue-1400" value="attended">Att</label>
+                  <label class="state-label"><input type="radio" name="tue-1400" value="late">Late</label>
+                  <label class="state-label"><input type="radio" name="tue-1400" value="absent">Abs</label>
+                </div>
+                <input type="text" class="reason-box" data-slot="tue-1400" placeholder="State reason...">
+              </div>
+            </td>
+            <td class="empty-cell" data-day="wed">—</td>
+            <td data-day="thu">
+              <div class="cell-card t-peh" data-teacher="Ms. Medrano">
+                <div class="text-group">PEH 3 <span class="sub">Ms. Medrano</span></div>
+                <div class="state-group">
+                  <label class="state-label"><input type="radio" name="thu-1400" value="attended">Att</label>
+                  <label class="state-label"><input type="radio" name="thu-1400" value="late">Late</label>
+                  <label class="state-label"><input type="radio" name="thu-1400" value="absent">Abs</label>
+                </div>
+                <input type="text" class="reason-box" data-slot="thu-1400" placeholder="State reason...">
+              </div>
+            </td>
+            <td class="empty-cell" data-day="fri">—</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Absolute Totals Consolidated View Page -->
+  <div id="totalsPageContainer">
+    <div class="section-label">Absolute Course Accumulation Metrics (All Weeks)</div>
+    <div class="table-container">
+      <table class="totals-table">
+        <thead>
+          <tr>
+            <th>Monitored Entity</th>
+            <th>Primary Handling Faculty</th>
+            <th class="text-center">Cumulative Absences (Abs)</th>
+            <th class="text-center">Cumulative Tardy Marks (Late)</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Martija (Student Profile)</strong></td>
+            <td><span style="color:var(--muted)">All Combined Classes</span></td>
+            <td class="text-center stat-accent-abs" id="grand-student-abs">0</td>
+            <td class="text-center stat-accent-late" id="grand-student-late">0</td>
+          </tr>
+          <tr>
+            <td>Introduction to Philosophy</td>
+            <td>Ms. Medrano</td>
+            <td class="text-center stat-accent-abs" id="t-medrano-abs">0</td>
+            <td class="text-center stat-accent-late" id="t-medrano-late">0</td>
+          </tr>
+          <tr>
+            <td>Understanding Culture, Society & Politics</td>
+            <td>Ms. Ellazar</td>
+            <td class="text-center stat-accent-abs" id="t-ellazar-abs">0</td>
+            <td class="text-center stat-accent-late" id="t-ellazar-late">0</td>
+          </tr>
+          <tr>
+            <td>English & Media Literacy Components</td>
+            <td>Ms. Masangcay</td>
+            <td class="text-center stat-accent-abs" id="t-masangcay-abs">0</td>
+            <td class="text-center stat-accent-late" id="t-masangcay-late">0</td>
+          </tr>
+          <tr>
+            <td>Contemporary Philippine Arts Component</td>
+            <td>Mr. Divino</td>
+            <td class="text-center stat-accent-abs" id="t-divino-abs">0</td>
+            <td class="text-center stat-accent-late" id="t-divino-late">0</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="subject-legend">
+    <div class="section-label">Subject Nomenclature Index</div>
+    <div class="legend-grid">
+      <div class="legend-item">
+        <div class="legend-color-dot" style="background: var(--hsa-accent)"></div>
+        <div class="legend-details">
+          <span class="legend-name">HSA</span>
+          <span class="legend-full">Housekeeping and Sanitation Act</span>
+        </div>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color-dot" style="background: var(--phil-accent)"></div>
+        <div class="legend-details">
+          <span class="legend-name">Phil.</span>
+          <span class="legend-full">Introduction to the Philosophy of the Human Person</span>
+        </div>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color-dot" style="background: var(--ucsp-accent)"></div>
+        <div class="legend-details">
+          <span class="legend-name">UCSP</span>
+          <span class="legend-full">Understanding Culture, Society, and Politics</span>
+        </div>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color-dot" style="background: var(--eapp-accent)"></div>
+        <div class="legend-details">
+          <span class="legend-name">EAPP</span>
+          <span class="legend-full">English for Academic and Professional Purposes</span>
+        </div>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color-dot" style="background: var(--ae-accent)"></div>
+        <div class="legend-details">
+          <span class="legend-name">A&E / Arts</span>
+          <span class="legend-full">Contemporary Philippine Arts from the Regions</span>
+        </div>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color-dot" style="background: var(--mil-accent)"></div>
+        <div class="legend-details">
+          <span class="legend-name">MIL</span>
+          <span class="legend-full">Media and Information Literacy</span>
+        </div>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color-dot" style="background: var(--peh-accent)"></div>
+        <div class="legend-details">
+          <span class="legend-name">PEH 3</span>
+          <span class="legend-full">Physical Education and Health 3</span>
+        </div>
+      </div>
+      <div class="legend-item">
+        <div class="legend-color-dot" style="background: var(--hgp-accent)"></div>
+        <div class="legend-details">
+          <span class="legend-name">HGP</span>
+          <span class="legend-full">Homeroom Guidance Program</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="system-glossary">
+    <div class="section-label">Interface & Status Glossary</div>
+    <div class="glossary-grid">
+      <div class="glossary-item">
+        <span class="glossary-term g-att">Att</span>
+        <span class="glossary-desc">Attended. Confirms student presence in the class session.</span>
+      </div>
+      <div class="glossary-item">
+        <span class="glossary-term g-late">Late</span>
+        <span class="glossary-desc">Late arrival. Requires inputting a specific context reason.</span>
+      </div>
+      <div class="glossary-item">
+        <span class="glossary-term g-abs">Abs</span>
+        <span class="glossary-desc">Absent. Flagged context requires mandatory reason entry.</span>
+      </div>
+      <div class="glossary-item">
+        <span class="glossary-term">◷</span>
+        <span class="glossary-desc">Day Tardy. Flags the student as late/tardy for that specific calendar school day date.</span>
+      </div>
+      <div class="glossary-item">
+        <span class="glossary-term">⦸</span>
+        <span class="glossary-desc">Day Exclusion. Mutes the entire target column when the student is entirely absent from school for that specific date.</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Data Operations Control Panel -->
+  <div class="data-operations-panel">
+    <div class="section-label">Data Operations & Safety Controls</div>
+    <div class="ops-box">
+      <div class="ops-desc">
+        Since data is stored directly in your local browser cache, clearing site memory will wipe the board clean. Use these controls to download an offline encrypted payload backup configuration or safely restore it back into this device or any secondary workspace.
+      </div>
+      <div class="ops-actions">
+        <button type="button" class="ops-btn ops-btn-export" onclick="exportDataBackup()" title="Download current tracking files locally">↓ Export Backup</button>
+        <button type="button" class="ops-btn" onclick="triggerImportSelection()" title="Upload and load a saved tracking config file">↑ Import Backup</button>
+        <input type="file" id="hiddenImportEl" accept=".json" onchange="importDataBackup(event)">
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+  const matrixLabel = document.getElementById('matrixLabel');
+  const panelContextLabel = document.getElementById('panelContextLabel');
+  const weekButtons = document.querySelectorAll('.week-btn:not(.totals-toggle-btn)');
+  const showTotalsBtn = document.getElementById('showTotalsBtn');
+  
+  const weeklyGridContainer = document.getElementById('weeklyGridContainer');
+  const totalsPageContainer = document.getElementById('totalsPageContainer');
+  
+  const radioInputs = document.querySelectorAll('.state-group input[type="radio"]');
+  const reasonInputs = document.querySelectorAll('.reason-box');
+
+  let activeWeek = parseInt(localStorage.getItem('bphscaActiveWeek')) || 1;
+  let isDisplayingGrandTotals = false;
+  
+  let database = {};
+  let reasonsDatabase = {};
+  let studentAbsenceDatabase = {}; 
+
+  function initDatabaseSync() {
+    try {
+      database = JSON.parse(localStorage.getItem('bphscaCheckboxes')) || {};
+      reasonsDatabase = JSON.parse(localStorage.getItem('bphscaReasons')) || {};
+      studentAbsenceDatabase = JSON.parse(localStorage.getItem('bphscaStudentAbsences')) || {};
+    } catch (e) {
+      database = {};
+      reasonsDatabase = {};
+      studentAbsenceDatabase = {};
+    }
+  }
+
+  function calculateCounters() {
+    const weeklyCounts = {
+      "Ms. Medrano": { abs: 0, late: 0 },
+      "Ms. Ellazar": { abs: 0, late: 0 },
+      "Ms. Masangcay": { abs: 0, late: 0 },
+      "Mr. Divino": { abs: 0, late: 0 }
+    };
+
+    const globalCounts = {
+      "Ms. Medrano": { abs: 0, late: 0 },
+      "Ms. Ellazar": { abs: 0, late: 0 },
+      "Ms. Masangcay": { abs: 0, late: 0 },
+      "Mr. Divino": { abs: 0, late: 0 }
+    };
+
+    Object.keys(database).forEach(key => {
+      const match = key.match(/^W(\d+)-(.*)$/);
+      if (match) {
+        const wNum = parseInt(match[1]);
+        const slotName = match[2];
+        const value = database[key];
+
+        const targetRadio = document.querySelector(`input[name="${slotName}"][value="${value}"]`);
+        if (targetRadio) {
+          const card = targetRadio.closest('.cell-card');
+          if (card) {
+            const teacher = card.getAttribute('data-teacher');
+            if (globalCounts[teacher]) {
+              if (value === 'absent') globalCounts[teacher].abs++;
+              if (value === 'late') globalCounts[teacher].late++;
+              
+              if (wNum === activeWeek) {
+                if (value === 'absent') weeklyCounts[teacher].abs++;
+                if (value === 'late') weeklyCounts[teacher].late++;
+              }
+            }
+          }
+        }
+      }
+    });
+
+    let currentWeekStudentAbs = 0;
+    let grandStudentAbsTotal = 0;
+    let currentWeekStudentLate = 0;
+    let grandStudentLateTotal = 0;
+
+    for (let w = 1; w <= 11; w++) {
+      ['mon', 'tue', 'wed', 'thu', 'fri'].forEach(day => {
+        const status = studentAbsenceDatabase[`W${w}-${day}`];
+        if (status === 'absent') {
+          grandStudentAbsTotal++;
+          if (w === activeWeek) currentWeekStudentAbs++;
+        } else if (status === 'late') {
+          grandStudentLateTotal++;
+          if (w === activeWeek) currentWeekStudentLate++;
+        }
+      });
+    }
+
+    if (isDisplayingGrandTotals) {
+      document.getElementById('stat-student-abs').innerHTML = `${grandStudentAbsTotal}<span class="lbl">Abs</span>`;
+      document.getElementById('stat-student-late').innerHTML = `${grandStudentLateTotal}<span class="lbl">Late</span>`;
+      Object.keys(globalCounts).forEach(teacher => {
+        const card = document.querySelector(`.metric-card[data-teacher="${teacher}"]`);
+        if (card) {
+          card.querySelector('.abs-count').innerHTML = `${globalCounts[teacher].abs}<span class="lbl">Abs</span>`;
+          card.querySelector('.late-count').innerHTML = `${globalCounts[teacher].late}<span class="lbl">Late</span>`;
+        }
+      });
+    } else {
+      document.getElementById('stat-student-abs').innerHTML = `${currentWeekStudentAbs}<span class="lbl">Abs</span>`;
+      document.getElementById('stat-student-late').innerHTML = `${currentWeekStudentLate}<span class="lbl">Late</span>`;
+      Object.keys(weeklyCounts).forEach(teacher => {
+        const card = document.querySelector(`.metric-card[data-teacher="${teacher}"]`);
+        if (card) {
+          card.querySelector('.abs-count').innerHTML = `${weeklyCounts[teacher].abs}<span class="lbl">Abs</span>`;
+          card.querySelector('.late-count').innerHTML = `${weeklyCounts[teacher].late}<span class="lbl">Late</span>`;
+        }
+      });
+    }
+
+    document.getElementById('grand-student-abs').textContent = grandStudentAbsTotal;
+    document.getElementById('grand-student-late').textContent = grandStudentLateTotal;
+    document.getElementById('t-medrano-abs').textContent = globalCounts["Ms. Medrano"].abs;
+    document.getElementById('t-medrano-late').textContent = globalCounts["Ms. Medrano"].late;
+    document.getElementById('t-ellazar-abs').textContent = globalCounts["Ms. Ellazar"].abs;
+    document.getElementById('t-ellazar-late').textContent = globalCounts["Ms. Ellazar"].late;
+    document.getElementById('t-masangcay-abs').textContent = globalCounts["Ms. Masangcay"].abs;
+    document.getElementById('t-masangcay-late').textContent = globalCounts["Ms. Masangcay"].late;
+    document.getElementById('t-divino-abs').textContent = globalCounts["Mr. Divino"].abs;
+    document.getElementById('t-divino-late').textContent = globalCounts["Mr. Divino"].late;
+  }
+
+  function toggleWholeDay(dayCode, targetStatus) {
+    const dbKey = `W${activeWeek}-${dayCode}`;
+    const currentStatus = studentAbsenceDatabase[dbKey];
+
+    if (currentStatus === targetStatus) {
+      delete studentAbsenceDatabase[dbKey];
+    } else {
+      studentAbsenceDatabase[dbKey] = targetStatus;
+    }
+
+    localStorage.setItem('bphscaStudentAbsences', JSON.stringify(studentAbsenceDatabase));
+    applyDayMuteLayouts();
+    calculateCounters();
+  }
+
+  function applyDayMuteLayouts() {
+    const days = ['mon', 'tue', 'wed', 'thu', 'fri'];
+    days.forEach(day => {
+      const dbKey = `W${activeWeek}-${day}`;
+      const status = studentAbsenceDatabase[dbKey];
+      
+      const headerCell = document.getElementById(`th-${day}`);
+      if (headerCell) {
+        headerCell.classList.toggle('day-hidden', status === 'absent');
+        headerCell.classList.toggle('day-tardy', status === 'late');
+      }
+
+      document.querySelectorAll(`td[data-day="${day}"]`).forEach(td => {
+        td.className = ''; // reset first
+        if (status === 'absent') {
+          td.classList.add(`day-muted-${day}`);
+        } else if (status === 'late') {
+          td.classList.add(`day-warn-${day}`);
+        }
+      });
+    });
+  }
+
+  function runLayoutSync(selectedWeek) {
+    isDisplayingGrandTotals = false;
+    activeWeek = selectedWeek;
+    localStorage.setItem('bphscaActiveWeek', selectedWeek);
+
+    showTotalsBtn.classList.remove('active');
+    weeklyGridContainer.style.display = 'block';
+    totalsPageContainer.style.display = 'none';
+    panelContextLabel.textContent = "Attendance Metrics Dashboard (Active Week)";
+
+    weekButtons.forEach(btn => {
+      const targetNum = parseInt(btn.getAttribute('data-week'));
+      btn.classList.toggle('active', targetNum === selectedWeek);
+    });
+
+    if (matrixLabel) {
+      matrixLabel.textContent = 'Weekly Class Program Grid — Week ' + selectedWeek;
+    }
+
+    document.querySelectorAll('.state-group').forEach(group => {
+      const activeCheckedInput = group.querySelector('input:checked');
+      if(activeCheckedInput) activeCheckedInput.checked = false;
+    });
+    reasonInputs.forEach(input => input.value = '');
+
+    Object.keys(database).forEach(storageKey => {
+      if (storageKey.startsWith('W' + selectedWeek + '-')) {
+        const slotName = storageKey.replace('W' + selectedWeek + '-', '');
+        const targetValue = database[storageKey];
+        
+        const targetRadio = document.querySelector(`input[name="${slotName}"][value="${targetValue}"]`);
+        if (targetRadio) {
+          targetRadio.checked = true;
+        }
+      }
+    });
+
+    Object.keys(reasonsDatabase).forEach(storageKey => {
+      if (storageKey.startsWith('W' + selectedWeek + '-')) {
+        const slotName = storageKey.replace('W' + selectedWeek + '-', '');
+        const targetInput = document.querySelector(`input[data-slot="${slotName}"]`);
+        if (targetInput) {
+          targetInput.value = reasonsDatabase[storageKey];
+        }
+      }
+    });
+
+    applyDayMuteLayouts();
+    calculateCounters();
+  }
+
+  showTotalsBtn.onclick = function() {
+    isDisplayingGrandTotals = true;
+    weekButtons.forEach(btn => btn.classList.remove('active'));
+    this.classList.add('active');
+    
+    weeklyGridContainer.style.display = 'none';
+    totalsPageContainer.style.display = 'block';
+    panelContextLabel.textContent = "Attendance Metrics Dashboard (Absolute Cumulative Totals)";
+    calculateCounters();
+  };
+
+  weekButtons.forEach(btn => {
+    const targetNum = parseInt(btn.getAttribute('data-week'));
+    btn.onclick = function() {
+      runLayoutSync(targetNum);
+    };
+  });
+
+  radioInputs.forEach(radio => {
+    radio.addEventListener('click', function(e) {
+      const slotName = this.name;
+      const uniqueStorageKey = 'W' + activeWeek + '-' + slotName;
+
+      if (database[uniqueStorageKey] === this.value) {
+        this.checked = false;
+        delete database[uniqueStorageKey];
+        
+        delete reasonsDatabase[uniqueStorageKey];
+        const targetInput = document.querySelector(`input[data-slot="${slotName}"]`);
+        if (targetInput) targetInput.value = '';
+      } else {
+        database[uniqueStorageKey] = this.value;
+        if (this.value === 'attended') {
+          delete reasonsDatabase[uniqueStorageKey];
+          const targetInput = document.querySelector(`input[data-slot="${slotName}"]`);
+          if (targetInput) targetInput.value = '';
+        }
+      }
+
+      localStorage.setItem('bphscaCheckboxes', JSON.stringify(database));
+      localStorage.setItem('bphscaReasons', JSON.stringify(reasonsDatabase));
+      calculateCounters();
+    });
+  });
+
+  reasonInputs.forEach(input => {
+    input.addEventListener('input', function() {
+      const slotName = this.getAttribute('data-slot');
+      const uniqueStorageKey = 'W' + activeWeek + '-' + slotName;
+
+      if (this.value.trim() === '') {
+        delete reasonsDatabase[uniqueStorageKey];
+      } else {
+        reasonsDatabase[uniqueStorageKey] = this.value;
+      }
+      localStorage.setItem('bphscaReasons', JSON.stringify(reasonsDatabase));
+    });
+  });
+
+  /* File Operation Engine Modules */
+  function exportDataBackup() {
+    const backupPayload = {
+      version: "1.2",
+      timestamp: new Date().toISOString(),
+      checkboxes: database,
+      reasons: reasonsDatabase,
+      studentAbsences: studentAbsenceDatabase
+    };
+
+    const dataBlob = new Blob([JSON.stringify(backupPayload, null, 2)], { type: "application/json" });
+    const downloadAnchor = document.createElement("a");
+    
+    const today = new Date();
+    const year = today.getFullYear();
+    const month = String(today.getMonth() + 1).padStart(2, '0');
+    const day = String(today.getDate()).padStart(2, '0');
+    const formattedDate = `${year}-${month}-${day}`;
+    
+    downloadAnchor.href = URL.createObjectURL(dataBlob);
+    downloadAnchor.download = `bphsca_backup_${formattedDate}.json`;
+    
+    document.body.appendChild(downloadAnchor);
+    downloadAnchor.click();
+    document.body.removeChild(downloadAnchor);
+  }
+
+  function triggerImportSelection() {
+    document.getElementById('hiddenImportEl').click();
+  }
+
+  function importDataBackup(event) {
+    const file = event.target.files[0];
+    if (!file) return;
+
+    const fileReader = new FileReader();
+    fileReader.onload = function(e) {
+      try {
+        const parsedPayload = JSON.parse(e.target.result);
+        
+        if (parsedPayload.checkboxes && parsedPayload.reasons && parsedPayload.studentAbsences) {
+          // Compatibility handling for older V1.1 structure variants
+          Object.keys(parsedPayload.studentAbsences).forEach(key => {
+            if (parsedPayload.studentAbsences[key] === true) {
+              parsedPayload.studentAbsences[key] = 'absent';
+            }
+          });
+
+          localStorage.setItem('bphscaCheckboxes', JSON.stringify(parsedPayload.checkboxes));
+          localStorage.setItem('bphscaReasons', JSON.stringify(parsedPayload.reasons));
+          localStorage.setItem('bphscaStudentAbsences', JSON.stringify(parsedPayload.studentAbsences));
+          
+          alert("Backup data payload integrated successfully into local cache storage.");
+          
+          initDatabaseSync();
+          runLayoutSync(activeWeek);
+        } else {
+          alert("Error: Selected file is missing essential attendance structure keys.");
+        }
+      } catch (err) {
+        alert("Error parsing backup configuration: Make sure the file uploaded is a valid tracking JSON file.");
+      }
+      event.target.value = '';
+    };
+    fileReader.readAsText(file);
+  }
+
+  // Final runtime initialization sequence
+  initDatabaseSync();
+  runLayoutSync(activeWeek);
+</script>
+
+</body>
+</html>
